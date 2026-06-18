@@ -69,9 +69,15 @@ _Dernière mise à jour : 2026-06-18_
 - **2026-06-18** — **V1.1 : F12, F13, F16 terminées (backend).** Extraction structurée IA (F12) avec
   enrichissement des offres nouvelles ; détection CDI→freelance (F13) heuristique + IA ; 3 nouvelles
   sources (F16 : The Muse, RemoteOK, RSS générique). **38 tests verts** (vs 25). Reste V1.1 : F14, F15, F17.
+- **2026-06-18** — **Chargeur de secrets SSM** (`Config`) : les connecteurs (France Travail, Adzuna…)
+  et Telegram résolvent désormais leurs secrets via variable d'env puis SSM Parameter Store
+  (`/recherche-emploi/{stage}/*`, SecureString). Comble l'écart « secrets non câblés » repéré avant
+  déploiement. **42 tests verts**.
 
 ### Reste à faire avant mise en production (hors périmètre code)
-- Renseigner les secrets dans SSM (clés France Travail, Adzuna, token Telegram) et les sorties Cognito
+- Créer les secrets dans SSM (SecureString `/recherche-emploi/{stage}/*` : France Travail, Adzuna,
+  token Telegram…) — chargés au runtime par `Config` (env d'abord, puis SSM). Commandes `aws ssm
+  put-parameter` documentées dans `.env.example`. Renseigner aussi les sorties Cognito
   (`userPoolId`/`userPoolClientId`) dans les environnements front, après `sam deploy`.
 - `sam deploy` (backend) + brancher Amplify Hosting sur le repo front + domaines `emplois.cachi.fr` /
   `api.emplois.cachi.fr`. Nécessite les credentials AWS du commanditaire.

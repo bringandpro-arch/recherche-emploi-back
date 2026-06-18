@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.json.Json;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import fr.cachi.emplois.infrastructure.source.http.Nodes;
@@ -30,7 +31,7 @@ public class FranceTravailJobSource implements JobSource {
     private final String clientSecret;
 
     public FranceTravailJobSource() {
-        this(System.getenv("FRANCE_TRAVAIL_CLIENT_ID"), System.getenv("FRANCE_TRAVAIL_CLIENT_SECRET"));
+        this(Config.get("FRANCE_TRAVAIL_CLIENT_ID"), Config.get("FRANCE_TRAVAIL_CLIENT_SECRET"));
     }
 
     public FranceTravailJobSource(String clientId, String clientSecret) {
@@ -46,7 +47,7 @@ public class FranceTravailJobSource implements JobSource {
     @Override
     public boolean enabled() {
         return clientId != null && !clientId.isBlank() && clientSecret != null && !clientSecret.isBlank()
-                && !"false".equalsIgnoreCase(System.getenv("FRANCE_TRAVAIL_ENABLED"));
+                && !"false".equalsIgnoreCase(Config.get("FRANCE_TRAVAIL_ENABLED"));
     }
 
     @Override

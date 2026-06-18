@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import fr.cachi.emplois.infrastructure.source.http.Nodes;
 
@@ -23,7 +24,7 @@ public class AdzunaJobSource implements JobSource {
     private final String appKey;
 
     public AdzunaJobSource() {
-        this(System.getenv("ADZUNA_APP_ID"), System.getenv("ADZUNA_APP_KEY"));
+        this(Config.get("ADZUNA_APP_ID"), Config.get("ADZUNA_APP_KEY"));
     }
 
     public AdzunaJobSource(String appId, String appKey) {
@@ -39,7 +40,7 @@ public class AdzunaJobSource implements JobSource {
     @Override
     public boolean enabled() {
         return appId != null && !appId.isBlank() && appKey != null && !appKey.isBlank()
-                && !"false".equalsIgnoreCase(System.getenv("ADZUNA_ENABLED"));
+                && !"false".equalsIgnoreCase(Config.get("ADZUNA_ENABLED"));
     }
 
     @Override

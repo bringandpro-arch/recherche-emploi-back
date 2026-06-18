@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import fr.cachi.emplois.infrastructure.source.http.Nodes;
 
@@ -22,7 +23,7 @@ public class RemotiveJobSource implements JobSource {
     private final boolean enabled;
 
     public RemotiveJobSource() {
-        this(!"false".equalsIgnoreCase(System.getenv("REMOTIVE_ENABLED")));
+        this(!"false".equalsIgnoreCase(Config.get("REMOTIVE_ENABLED")));
     }
 
     public RemotiveJobSource(boolean enabled) {

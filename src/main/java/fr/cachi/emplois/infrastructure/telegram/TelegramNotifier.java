@@ -4,6 +4,7 @@ import fr.cachi.emplois.domain.model.Offer;
 import fr.cachi.emplois.domain.model.Profile;
 import fr.cachi.emplois.domain.model.ScoredOffer;
 import fr.cachi.emplois.domain.port.Notifier;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 
 import java.util.Map;
@@ -18,7 +19,7 @@ public class TelegramNotifier implements Notifier {
     private final String defaultChatId;
 
     public TelegramNotifier() {
-        this(System.getenv("TELEGRAM_BOT_TOKEN"), System.getenv("TELEGRAM_CHAT_ID"));
+        this(Config.get("TELEGRAM_BOT_TOKEN"), Config.get("TELEGRAM_CHAT_ID"));
     }
 
     public TelegramNotifier(String botToken, String defaultChatId) {

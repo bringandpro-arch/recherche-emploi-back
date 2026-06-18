@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import fr.cachi.emplois.infrastructure.source.http.Nodes;
 
@@ -24,8 +25,8 @@ public class TheMuseJobSource implements JobSource {
     private final boolean enabled;
 
     public TheMuseJobSource() {
-        this(System.getenv("THE_MUSE_API_KEY"),
-                !"false".equalsIgnoreCase(System.getenv("THE_MUSE_ENABLED")));
+        this(Config.get("THE_MUSE_API_KEY"),
+                !"false".equalsIgnoreCase(Config.get("THE_MUSE_ENABLED")));
     }
 
     public TheMuseJobSource(String apiKey, boolean enabled) {

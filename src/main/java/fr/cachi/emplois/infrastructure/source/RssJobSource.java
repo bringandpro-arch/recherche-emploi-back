@@ -3,6 +3,7 @@ package fr.cachi.emplois.infrastructure.source;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -34,7 +35,7 @@ public class RssJobSource implements JobSource {
     private final List<String> feeds;
 
     public RssJobSource() {
-        this(parseFeeds(System.getenv("RSS_FEEDS")));
+        this(parseFeeds(Config.get("RSS_FEEDS")));
     }
 
     public RssJobSource(List<String> feeds) {

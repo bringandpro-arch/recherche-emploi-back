@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import fr.cachi.emplois.domain.model.RawJob;
 import fr.cachi.emplois.domain.model.SearchCriteria;
 import fr.cachi.emplois.domain.port.JobSource;
+import fr.cachi.emplois.infrastructure.config.Config;
 import fr.cachi.emplois.infrastructure.source.http.HttpJson;
 import fr.cachi.emplois.infrastructure.source.http.Nodes;
 
@@ -24,7 +25,7 @@ public class RemoteOkJobSource implements JobSource {
     private final boolean enabled;
 
     public RemoteOkJobSource() {
-        this(!"false".equalsIgnoreCase(System.getenv("REMOTEOK_ENABLED")));
+        this(!"false".equalsIgnoreCase(Config.get("REMOTEOK_ENABLED")));
     }
 
     public RemoteOkJobSource(boolean enabled) {
