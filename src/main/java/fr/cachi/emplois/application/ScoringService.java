@@ -35,19 +35,24 @@ public class ScoringService {
         int rule = ruleScore(profile, offer, reasons);
 
         Integer llmScore = null;
-        boolean freelanceConvertible = false;
+        // F13 : détection déterministe « CDI ouvrable en freelance » (gratuite, hors IA).
+        boolean freelanceConvertible = FreelanceConvertibility.looksConvertible(offer);
 
         if (llm != null && llm.available() && rule >= PREFILTER_THRESHOLD) {
             try {
                 LlmScore ai = llm.score(profile, offer);
                 llmScore = clamp(ai.score());
-                freelanceConvertible = ai.freelanceConvertible();
+                freelanceConvertible = freelanceConvertible || ai.freelanceConvertible();
                 if (ai.reasons() != null) {
                     reasons.addAll(ai.reasons());
                 }
             } catch (Exception e) {
                 reasons.add("IA indisponible (repli sur le score de règles)");
             }
+        }
+
+        if (freelanceConvertible) {
+            reasons.add("CDI potentiellement ouvrable en mission freelance");
         }
 
         int finalScore = llmScore == null ? rule : (int) Math.round(0.6 * rule + 0.4 * llmScore);
