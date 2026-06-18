@@ -39,6 +39,21 @@ public final class HttpJson {
         return Json.mapper().readTree(resp.body());
     }
 
+    /** GET d'un corps texte brut (ex. flux RSS/XML) avec en-têtes optionnels. */
+    public static String getText(String url, Map<String, String> headers) throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(20))
+                .GET();
+        if (headers != null) {
+            headers.forEach(b::header);
+        }
+        HttpResponse<String> resp = CLIENT.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() / 100 != 2) {
+            throw new IllegalStateException("HTTP " + resp.statusCode() + " sur " + url);
+        }
+        return resp.body();
+    }
+
     /** POST application/x-www-form-urlencoded, renvoie le corps texte (ex. réponse OAuth). */
     public static String postForm(String url, Map<String, String> form, Map<String, String> headers)
             throws Exception {

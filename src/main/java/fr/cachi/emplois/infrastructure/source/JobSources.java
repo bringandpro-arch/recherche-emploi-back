@@ -15,7 +15,10 @@ public final class JobSources {
         return List.of(
                 new FranceTravailJobSource(),
                 new AdzunaJobSource(),
-                new RemotiveJobSource());
+                new RemotiveJobSource(),
+                new TheMuseJobSource(),
+                new RemoteOkJobSource(),
+                new RssJobSource());
     }
 
     /** Uniquement les sources activées (clés présentes / non désactivées). */
