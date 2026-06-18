@@ -59,7 +59,7 @@ _Dernière mise à jour : 2026-06-18_
 
 ## Journal
 
-- **2026-06-18** — Phase 1 terminée et fichiers versionnés/poussés (back `06982f4`, front `2878103`).
+- **2026-06-18** — Phase 1 terminée et fichiers versionnés/poussés (back `ba75857`, front `57f2d52`).
   Arbitrages tranchés avec le commanditaire → bascule de la conception vers **AWS serverless + Cognito +
   Bedrock + Amplify + multi-utilisateur**. PLAN/ETAT révisés. Démarrage Phase 2 sur F1.
 - **2026-06-18** — **MVP F1→F11 terminé.** Backend : socle SAM, auth Cognito, profil, 3 connecteurs,
