@@ -48,14 +48,14 @@ _Dernière mise à jour : 2026-06-18_
 
 ## Phase 2 — V1.1+ (après MVP)
 
-| # | Feature | Statut |
-|---|---|---|
-| F12 | IA — extraction structurée des offres | ⬜ |
-| F13 | IA — détection CDI → mission freelance | ⬜ |
-| F14 | IA — génération de pitch / lettre (Sonnet) | ⬜ |
-| F15 | Feedback utilisateur → ré-apprentissage scoring | ⬜ |
-| F16 | Sources additionnelles (Jooble, The Muse, Free-Work, RSS) | ⬜ |
-| F17 | App mobile (Capacitor Android/iOS) | ⬜ |
+| # | Feature | Statut | Notes |
+|---|---|---|---|
+| F12 | IA — extraction structurée des offres | ✅ | `ExtractedFields` + `LlmProvider.extract()` + prompt `extraction-user` + parsing Bedrock ; `OfferEnricher` comble les champs manquants (contrat, télétravail, stack, rému, ville) sur les offres **nouvelles** uniquement (coût maîtrisé), sans écraser l'existant ; câblé dans `ScanService`/`Wiring` |
+| F13 | IA — détection CDI → mission freelance | ✅ | Heuristique déterministe `FreelanceConvertibility` (régie/ESN/mission/consultant…) **+** signal IA `freelance_convertible` ; union des deux dans `ScoringService`, raison explicite ; fonctionne même IA désactivée |
+| F14 | IA — génération de pitch / lettre (Sonnet) | ⬜ | |
+| F15 | Feedback utilisateur → ré-apprentissage scoring | ⬜ | |
+| F16 | Sources additionnelles | ✅ | Connecteurs **The Muse** (JSON, clé optionnelle), **RemoteOK** (JSON, sans clé), **RSS générique** (`RSS_FEEDS`, parsing XML protégé XXE — couvre Free-Work & flux divers) ; enregistrés dans `JobSources` ; `.env.example` complété |
+| F17 | App mobile (Capacitor Android/iOS) | ⬜ | |
 
 ## Journal
 
@@ -66,6 +66,9 @@ _Dernière mise à jour : 2026-06-18_
   normalisation, dédup/historique, scoring (règles + Bedrock), scan orchestré, Telegram, filtres — **25 tests verts**.
   Front : app Ionic/Angular/Tailwind (login Cognito, profil, offres filtrables, détail) — build OK.
   Tout poussé sur les deux repos.
+- **2026-06-18** — **V1.1 : F12, F13, F16 terminées (backend).** Extraction structurée IA (F12) avec
+  enrichissement des offres nouvelles ; détection CDI→freelance (F13) heuristique + IA ; 3 nouvelles
+  sources (F16 : The Muse, RemoteOK, RSS générique). **38 tests verts** (vs 25). Reste V1.1 : F14, F15, F17.
 
 ### Reste à faire avant mise en production (hors périmètre code)
 - Renseigner les secrets dans SSM (clés France Travail, Adzuna, token Telegram) et les sorties Cognito
@@ -74,4 +77,4 @@ _Dernière mise à jour : 2026-06-18_
   `api.emplois.cachi.fr`. Nécessite les credentials AWS du commanditaire.
 - Activer Claude sur Bedrock (accès modèle) dans la région choisie.
 
-## Suite (V1.1+) : F12 extraction IA · F13 CDI→freelance · F14 pitch · F15 feedback · F16 sources · F17 mobile
+## Suite (V1.1+) : F14 pitch · F15 feedback · F17 mobile
