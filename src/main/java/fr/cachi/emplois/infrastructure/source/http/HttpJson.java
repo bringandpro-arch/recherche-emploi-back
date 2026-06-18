@@ -54,6 +54,24 @@ public final class HttpJson {
         return resp.body();
     }
 
+    /** POST application/json, renvoie le corps de réponse parsé en JSON (ex. API Jooble). */
+    public static JsonNode postJson(String url, String body, Map<String, String> headers)
+            throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(20))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
+        if (headers != null) {
+            headers.forEach(b::header);
+        }
+        HttpResponse<String> resp = CLIENT.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() / 100 != 2) {
+            throw new IllegalStateException("HTTP " + resp.statusCode() + " sur " + url);
+        }
+        return Json.mapper().readTree(resp.body());
+    }
+
     /** POST application/x-www-form-urlencoded, renvoie le corps texte (ex. réponse OAuth). */
     public static String postForm(String url, Map<String, String> form, Map<String, String> headers)
             throws Exception {

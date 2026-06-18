@@ -56,4 +56,20 @@ public final class Nodes {
             return null;
         }
     }
+
+    /**
+     * Instant à partir d'un timestamp epoch en secondes (ex. {@code created_at} d'Arbeitnow),
+     * fourni comme nœud numérique ou texte. Renvoie null si absent/non numérique.
+     */
+    public static Instant epochSeconds(JsonNode node, String field) {
+        String raw = text(node, field);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.ofEpochSecond(Long.parseLong(raw.trim()));
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

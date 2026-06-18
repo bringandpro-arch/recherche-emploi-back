@@ -54,7 +54,7 @@ _Dernière mise à jour : 2026-06-18_
 | F13 | IA — détection CDI → mission freelance | ✅ | Heuristique déterministe `FreelanceConvertibility` (régie/ESN/mission/consultant…) **+** signal IA `freelance_convertible` ; union des deux dans `ScoringService`, raison explicite ; fonctionne même IA désactivée |
 | F14 | IA — génération de pitch / lettre (Sonnet) | ⬜ | |
 | F15 | Feedback utilisateur → ré-apprentissage scoring | ⬜ | |
-| F16 | Sources additionnelles | ✅ | Connecteurs **The Muse** (JSON, clé optionnelle), **RemoteOK** (JSON, sans clé), **RSS générique** (`RSS_FEEDS`, parsing XML protégé XXE — couvre Free-Work & flux divers) ; enregistrés dans `JobSources` ; `.env.example` complété |
+| F16 | Sources additionnelles | ✅ | **6 → 16 connecteurs.** Lot initial : **The Muse**, **RemoteOK**, **RSS générique** (`RSS_FEEDS`, XXE-safe — couvre Free-Work). Élargissement (F16+) : APIs publiques sans clé **Arbeitnow / Jobicy / Himalayas** ; agrégateurs **ATS opt-in** (liste de boards) **Greenhouse / Lever / Ashby / SmartRecruiters / Recruitee** ; agrégateurs FR à clé optionnelle **Jooble** (POST JSON) / **Careerjet** (`locale fr_FR`). Tous suivent le patron `JobSource` (parse hors-ligne testé), se désactivent seuls sans config, enregistrés dans `JobSources` ; `.env.example` complété |
 | F17 | App mobile (Capacitor Android/iOS) | ⬜ | |
 
 ## Journal
@@ -73,6 +73,13 @@ _Dernière mise à jour : 2026-06-18_
   et Telegram résolvent désormais leurs secrets via variable d'env puis SSM Parameter Store
   (`/recherche-emploi/{stage}/*`, SecureString). Comble l'écart « secrets non câblés » repéré avant
   déploiement. **42 tests verts**.
+- **2026-06-18** — **Catalogue de sources élargi (F16+) : 6 → 16 connecteurs.** Ajout de 10 `JobSource`
+  respectant les contraintes (APIs/flux officiels, pas de scraping CGU-restreint, secrets via `Config`,
+  désactivation auto sans config) : Arbeitnow / Jobicy / Himalayas (sans clé) ; ATS opt-in Greenhouse /
+  Lever / Ashby / SmartRecruiters / Recruitee (liste de boards `*_BOARDS`/`*_COMPANIES`) ; Jooble (POST
+  JSON, clé) et Careerjet (affid, `fr_FR`). Helpers `HttpJson.postJson` + `Nodes.epochSeconds` + util
+  `Boards`. Parsing hors-ligne testé pour chacun. **53 tests verts** (vs 42). `.env.example`, `PLAN.md` §5
+  et `DEPLOIEMENT.md` mis à jour.
 - **2026-06-18** — **Observabilité** ajoutée au `template.yaml` (free tier) : rétention des logs
   (`LogRetentionDays`, 30 j), tracing X-Ray, 5 alarmes CloudWatch (erreurs/throttles/durée scan + API)
   → topic SNS (`AlarmEmail` optionnel), dashboard. Mode d'emploi de déploiement (`DEPLOIEMENT.md`)

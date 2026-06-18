@@ -104,6 +104,7 @@ fonctionne quand même avec les sources sans clé (Remotive, RemoteOK, The Muse,
 | **Telegram** (notifications) | Dans Telegram, parler à **@BotFather** → `/newbot` | un **token** `123456:ABC-...` |
 | **The Muse** *(optionnel)* | https://www.themuse.com/developers/api/v2 → demander une clé | `api_key` (facultatif, marche sans) |
 
+
 ### 2.1 Obtenir son `chat_id` Telegram
 
 1. Envoyer un message quelconque à ton bot (celui créé via BotFather).
@@ -183,6 +184,19 @@ aws ssm put-parameter --type SecureString --region eu-west-3 --name /recherche-e
 # Optionnels
 aws ssm put-parameter --type SecureString --region eu-west-3 --name /recherche-emploi/dev/THE_MUSE_API_KEY --value "<cle>"
 aws ssm put-parameter --type String       --region eu-west-3 --name /recherche-emploi/dev/RSS_FEEDS        --value "https://flux1.xml,https://flux2.xml"
+
+# Sources additionnelles (F16+) — toutes optionnelles, le connecteur se désactive seul si absent
+#  - Agrégateurs FR à clé/affid :
+aws ssm put-parameter --type SecureString --region eu-west-3 --name /recherche-emploi/dev/JOOBLE_API_KEY  --value "<cle>"
+aws ssm put-parameter --type SecureString --region eu-west-3 --name /recherche-emploi/dev/CAREERJET_AFFID --value "<affid>"
+#  - Agrégateurs ATS (sans clé) : listes d'entreprises/boards à suivre (slugs séparés par des virgules) :
+aws ssm put-parameter --type String --region eu-west-3 --name /recherche-emploi/dev/GREENHOUSE_BOARDS        --value "entreprise1,entreprise2"
+aws ssm put-parameter --type String --region eu-west-3 --name /recherche-emploi/dev/LEVER_BOARDS             --value "entreprise1,entreprise2"
+aws ssm put-parameter --type String --region eu-west-3 --name /recherche-emploi/dev/ASHBY_BOARDS             --value "entreprise1"
+aws ssm put-parameter --type String --region eu-west-3 --name /recherche-emploi/dev/SMARTRECRUITERS_COMPANIES --value "entreprise1"
+aws ssm put-parameter --type String --region eu-west-3 --name /recherche-emploi/dev/RECRUITEE_COMPANIES      --value "entreprise1"
+#  - APIs publiques sans clé (Arbeitnow, Jobicy, Himalayas) : actives par défaut, rien à poser.
+#    Pour en couper une : poser p.ex. ARBEITNOW_ENABLED=false (type String).
 ```
 
 > **Mettre à jour** une valeur : ajouter `--overwrite`.

@@ -18,7 +18,20 @@ public final class JobSources {
                 new RemotiveJobSource(),
                 new TheMuseJobSource(),
                 new RemoteOkJobSource(),
-                new RssJobSource());
+                new RssJobSource(),
+                // APIs publiques remote/tech sans clé
+                new ArbeitnowJobSource(),
+                new JobicyJobSource(),
+                new HimalayasJobSource(),
+                // Agrégateurs ATS, opt-in via liste de boards/entreprises
+                new GreenhouseJobSource(),
+                new LeverJobSource(),
+                new AshbyJobSource(),
+                new SmartRecruitersJobSource(),
+                new RecruiteeJobSource(),
+                // Agrégateurs FR, clé optionnelle
+                new JoobleJobSource(),
+                new CareerjetJobSource());
     }
 
     /** Uniquement les sources activées (clés présentes / non désactivées). */

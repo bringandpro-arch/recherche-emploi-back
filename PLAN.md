@@ -246,8 +246,18 @@ Réalisation feature par feature F1 → F11 (MVP), puis F12+. Après chaque feat
 | **The Muse** | API officielle (clé gratuite) | Free tier | US/intl | V1.1. |
 | **Jooble** | API (clé sur demande) | Free/dev | Agrégateur FR | Clé par e-mail ; V1.1. |
 | **APEC** — cadre | Pas d'API publique | — | Cadres FR (cœur de cible) | RSS/scraping fragile → **module optionnel désactivé**. |
-| **Free-Work** — freelance + CDI tech | RSS / à vérifier | À vérifier | Freelance + CDI tech FR | Vérifier API/RSS & CGU ; V1.1. |
-| **Flux RSS divers** | RSS (connecteur générique) | Gratuit | Variable | Paramétrable ; V1.1. |
+| **Free-Work** — freelance + CDI tech | RSS (via connecteur générique `RSS_FEEDS`) | Gratuit | Freelance + CDI tech FR | Couvert par le connecteur RSS ; flux à renseigner. |
+| **Flux RSS divers** | RSS (connecteur générique) | Gratuit | Variable | Paramétrable (`RSS_FEEDS`) ; fait. |
+| **Arbeitnow** — UE / remote tech | API publique JSON | Gratuit, sans clé | UE + remote tech | Fait (F16+). |
+| **Jobicy** — remote tech | API publique JSON v2 | Gratuit, sans clé | Remote tech (anglophone) | Fait (F16+). |
+| **Himalayas** — remote tech | API publique JSON | Gratuit, sans clé | Remote tech (anglophone) | Fait (F16+). |
+| **Greenhouse** — ATS d'entreprise | API publique « job board » | Gratuit, sans clé | Offres directes des entreprises ciblées | Opt-in `GREENHOUSE_BOARDS` ; données propres ; fait (F16+). |
+| **Lever** — ATS d'entreprise | API publique « postings » | Gratuit, sans clé | Idem | Opt-in `LEVER_BOARDS` ; fait (F16+). |
+| **Ashby** — ATS d'entreprise | API publique « job board » | Gratuit, sans clé | Idem | Opt-in `ASHBY_BOARDS` ; fait (F16+). |
+| **SmartRecruiters** — ATS d'entreprise | API publique « postings » | Gratuit, sans clé | Idem | Opt-in `SMARTRECRUITERS_COMPANIES` ; fait (F16+). |
+| **Recruitee** — ATS d'entreprise | API publique « offers » | Gratuit, sans clé | Idem | Opt-in `RECRUITEE_COMPANIES` ; fait (F16+). |
+| **Jooble** | API REST (clé gratuite par e-mail, POST JSON) | Free/dev | Agrégateur FR | Dormant sans `JOOBLE_API_KEY` ; fait (F16+). |
+| **Careerjet** | API publique (affid gratuit) | Gratuit | Agrégateur FR (`locale fr_FR`) | Dormant sans `CAREERJET_AFFID` ; fait (F16+). |
 | LinkedIn / Indeed / WTTJ / Malt | ❌ Non | — | — | CGU restrictives → **exclus**. |
 
 ---
