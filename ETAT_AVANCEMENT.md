@@ -40,7 +40,7 @@ _Dernière mise à jour : 2026-06-18_
 | F4 | Interface `JobSource` + connecteurs (France Travail, Adzuna, Remotive) | ✅ | Interface `JobSource` + `RawJob`/`SearchCriteria` ; 3 connecteurs (OAuth2 FT, clés Adzuna, Remotive sans clé) ; registre `JobSources` (actifs selon config) ; parsing testé hors-ligne (4 tests) |
 | F5 | Normalisation des offres | ✅ | `OfferNormalizer` : contrat (labels FR), remote %, ville (villes FR connues), salaire/TJM, stack (dictionnaire techs), `dedupKey` ; modèle `Offer` ; tests verts |
 | F6 | Déduplication + historique | ✅ | `DedupService` (dédup intra-lot + `selectUnseen`/`markSeen` par userId) ; ports `OfferRepository`/`SeenOfferRepository` + impl. DynamoDB ; tests verts |
-| F7 | Scoring (règles + IA Bedrock via `LlmProvider`) | ⬜ | |
+| F7 | Scoring (règles + IA Bedrock via `LlmProvider`) | ✅ | `ScoringService` (règles : skills/contrat/localisation/remote/rému/fraîcheur + pénalité mots exclus, pré-filtre IA) ; port `LlmProvider` + `BedrockLlmProvider`/`NoopLlmProvider` + `Prompts` (gabarits resources) ; tests verts |
 | F8 | Scan périodique (EventBridge Scheduler → Lambda) | ⬜ | |
 | F9 | Notification Telegram | ⬜ | |
 | F10 | Filtrage freelance/CDI + localisation/remote | ⬜ | |

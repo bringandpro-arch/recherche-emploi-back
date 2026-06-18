@@ -257,7 +257,7 @@ Réalisation feature par feature F1 → F11 (MVP), puis F12+. Après chaque feat
 - `PLAN.md`, `ETAT_AVANCEMENT.md` (racine + copie dans le repo back pour versioning Git).
 - `recherche-emploi-back/CLAUDE.md`, `recherche-emploi-front/CLAUDE.md`.
 - `.claude/settings.json`, `.env.example`, `.gitignore`, `.gitattributes` (chaque repo).
-- `recherche-emploi-back/prompts/` — templates LLM (scoring, extraction).
+- `recherche-emploi-back/src/main/resources/prompts/` — templates LLM (scoring, extraction), packagés dans le jar.
 - À venir (Phase 2) : `template.yaml` (SAM), `samconfig.toml`, code Lambda, `amplify.yml`.
 
 ---
