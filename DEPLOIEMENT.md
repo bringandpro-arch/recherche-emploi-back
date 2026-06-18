@@ -107,12 +107,25 @@ fonctionne quand même avec les sources sans clé (Remotive, RemoteOK, The Muse,
 
 ### 2.1 Obtenir son `chat_id` Telegram
 
-1. Envoyer un message quelconque à ton bot (celui créé via BotFather).
+1. Dans Telegram, ouvrir la conversation avec **ton bot** (celui créé via BotFather), appuyer sur
+   **Démarrer / Start**, puis lui envoyer un message quelconque (ex. `bonjour`). **Indispensable** :
+   `getUpdates` ne renvoie rien tant que tu n'as pas écrit au bot.
 2. Appeler (remplace `<TOKEN>`) :
    ```
    curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
    ```
-3. Lire `result[].message.chat.id` dans la réponse → c'est ton `chat_id`.
+3. Dans la réponse, lire l'id du **dernier** update : pour un chat privé c'est
+   `result[-1].message.chat.id` (entier **positif**) ; pour un **groupe** c'est aussi
+   `message.chat.id` mais **négatif** ; pour un **canal**, c'est `result[-1].channel_post.chat.id`.
+
+> **Si tu obtiens `{"ok":true,"result":[]}`** (réponse vide), dans l'ordre :
+> 1. **Renvoie un nouveau message** au bot, puis rappelle `getUpdates` **immédiatement** —
+>    Telegram ne garde les updates que ~24 h et un précédent `getUpdates` a pu avancer l'offset.
+>    Pour relire le tout dernier update sans en renvoyer : `getUpdates?offset=-1`.
+> 2. Vérifie qu'**aucun webhook** n'intercepte les updates (sinon `getUpdates` reste vide) :
+>    `curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"`. S'il y a une `url`, la retirer :
+>    `curl "https://api.telegram.org/bot<TOKEN>/deleteWebhook"`, puis reprendre à l'étape 1.
+> 3. Confirme que le **token** est le bon (un mauvais token donne `{"ok":false,...}`, pas un `result` vide).
 
 > Le `chat_id` peut être posé **globalement** en SSM (`TELEGRAM_CHAT_ID`) **ou** par utilisateur dans
 > son profil (champ *Telegram chat id* de l'écran Profil). Le profil prime sur le global.
