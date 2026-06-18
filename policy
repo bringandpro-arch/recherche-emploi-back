@@ -1,0 +1,114 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "DeployServerlessStack",
+			"Effect": "Allow",
+			"Action": [
+				"cloudformation:*",
+				"lambda:*",
+				"dynamodb:*",
+				"s3:*",
+				"cloudfront:*",
+				"cognito-idp:*",
+				"apigateway:*",
+				"logs:*",
+				"scheduler:*",
+				"sns:*",
+				"cloudwatch:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "IamManageRechercheEmploiRoles",
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreateRole",
+				"iam:DeleteRole",
+				"iam:GetRole",
+				"iam:UpdateRole",
+				"iam:UpdateAssumeRolePolicy",
+				"iam:AttachRolePolicy",
+				"iam:DetachRolePolicy",
+				"iam:PutRolePolicy",
+				"iam:DeleteRolePolicy",
+				"iam:GetRolePolicy",
+				"iam:ListRolePolicies",
+				"iam:ListAttachedRolePolicies",
+				"iam:ListRoleTags",
+				"iam:TagRole",
+				"iam:UntagRole"
+			],
+			"Resource": "arn:aws:iam::*:role/recherche-emploi-back-*"
+		},
+		{
+			"Sid": "IamPassRechercheEmploiRoles",
+			"Effect": "Allow",
+			"Action": "iam:PassRole",
+			"Resource": "arn:aws:iam::*:role/recherche-emploi-back-*",
+			"Condition": {
+				"StringEquals": {
+					"iam:PassedToService": [
+						"lambda.amazonaws.com",
+						"scheduler.amazonaws.com"
+					]
+				}
+			}
+		},
+		{
+			"Sid": "SsmSecretsRechercheEmploi",
+			"Effect": "Allow",
+			"Action": [
+				"ssm:PutParameter",
+				"ssm:GetParameter",
+				"ssm:GetParameters",
+				"ssm:GetParametersByPath",
+				"ssm:DeleteParameter",
+				"ssm:DeleteParameters",
+				"ssm:AddTagsToResource",
+				"ssm:ListTagsForResource"
+			],
+			"Resource": "arn:aws:ssm:*:*:parameter/recherche-emploi/*"
+		},
+		{
+			"Sid": "KmsForSsmSecureString",
+			"Effect": "Allow",
+			"Action": [
+				"kms:Encrypt",
+				"kms:Decrypt",
+				"kms:GenerateDataKey",
+				"kms:DescribeKey"
+			],
+			"Resource": "*",
+			"Condition": {
+				"StringLike": {
+					"kms:ViaService": "ssm.*.amazonaws.com"
+				}
+			}
+		},
+		{
+			"Sid": "BedrockListAndInvoke",
+			"Effect": "Allow",
+			"Action": [
+				"bedrock:ListFoundationModels",
+				"bedrock:GetFoundationModel",
+				"bedrock:InvokeModel"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "AmplifyHostingFront",
+			"Effect": "Allow",
+			"Action": [
+				"amplify:*"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "WhoAmI",
+			"Effect": "Allow",
+			"Action": "sts:GetCallerIdentity",
+			"Resource": "*"
+		}
+	]
+}
