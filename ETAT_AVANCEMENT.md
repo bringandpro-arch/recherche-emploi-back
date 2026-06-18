@@ -73,6 +73,10 @@ _Dernière mise à jour : 2026-06-18_
   et Telegram résolvent désormais leurs secrets via variable d'env puis SSM Parameter Store
   (`/recherche-emploi/{stage}/*`, SecureString). Comble l'écart « secrets non câblés » repéré avant
   déploiement. **42 tests verts**.
+- **2026-06-18** — **Observabilité** ajoutée au `template.yaml` (free tier) : rétention des logs
+  (`LogRetentionDays`, 30 j), tracing X-Ray, 5 alarmes CloudWatch (erreurs/throttles/durée scan + API)
+  → topic SNS (`AlarmEmail` optionnel), dashboard. Mode d'emploi de déploiement (`DEPLOIEMENT.md`)
+  complété d'une section Observabilité.
 
 ### Reste à faire avant mise en production (hors périmètre code)
 - Créer les secrets dans SSM (SecureString `/recherche-emploi/{stage}/*` : France Travail, Adzuna,

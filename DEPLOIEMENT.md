@@ -102,7 +102,13 @@ sam deploy
 EventBridge Scheduler, rôles IAM) et demande confirmation (`confirm_changeset = true`). Tape `y`.
 
 > Premier déploiement « propre » possible avec `sam deploy --guided` pour revoir les paramètres
-> (`Stage`, `ScanSchedule`, `CorsOrigin`, `BedrockRegion`, `LlmModel`). Sinon `sam deploy` suffit.
+> (`Stage`, `ScanSchedule`, `CorsOrigin`, `BedrockRegion`, `LlmModel`, `LogRetentionDays`, `AlarmEmail`).
+> Sinon `sam deploy` suffit.
+>
+> Pour recevoir les alertes par email dès le déploiement (voir § 7 Observabilité) :
+> ```
+> sam deploy --parameter-overrides Stage=dev AlarmEmail=toi@exemple.fr
+> ```
 
 ### 3.1 Récupérer les *Outputs* (indispensables pour le front)
 
@@ -194,9 +200,53 @@ On y voit le nombre de paramètres SSM chargés, les sources actives, les offres
 
 ---
 
-## 7. Déployer le front
+## 7. Observabilité (inclus dans la stack, free tier)
 
-### 7.1 Renseigner la configuration Cognito + API
+Le `template.yaml` provisionne automatiquement :
+
+- **Rétention des logs** : 30 jours par défaut sur les deux Lambdas (paramètre `LogRetentionDays`).
+  Évite le piège du stockage CloudWatch *illimité* (coût qui grimpe en silence).
+- **Tracing X-Ray** (`Tracing: Active`) : traces des invocations Lambda. Échantillonnage X-Ray par
+  défaut (1 req/s + 5 %) → bien en dessous des 100 000 traces/mois gratuites.
+- **5 alarmes CloudWatch** (métriques `AWS/Lambda` standard, gratuites) → publient sur un **topic SNS** :
+  | Alarme | Déclenchement |
+  |---|---|
+  | `recherche-emploi-scan-errors-dev` | ≥ 1 erreur de scan / 5 min |
+  | `recherche-emploi-scan-throttles-dev` | throttling du scan |
+  | `recherche-emploi-scan-duration-dev` | scan > 240 s (timeout = 300 s) |
+  | `recherche-emploi-api-errors-dev` | ≥ 1 erreur API / 5 min |
+  | `recherche-emploi-api-throttles-dev` | throttling de l'API |
+- **Dashboard CloudWatch** `recherche-emploi-dev` (invocations / erreurs / durée scan + API).
+
+### 7.1 Recevoir les alertes par email
+
+Si tu n'as pas passé `AlarmEmail` au déploiement, l'abonnement n'existe pas. Deux options :
+
+- Redéployer avec l'email : `sam deploy --parameter-overrides Stage=dev AlarmEmail=toi@exemple.fr`
+- Ou s'abonner ponctuellement au topic (ARN dans l'output `AlarmTopicArn`) :
+  ```
+  aws sns subscribe --region eu-west-3 --protocol email \
+    --topic-arn <AlarmTopicArn> --notification-endpoint toi@exemple.fr
+  ```
+**Important** : AWS envoie un mail de **confirmation** d'abonnement → cliquer le lien, sinon aucune alerte.
+
+### 7.2 Ouvrir le dashboard et les traces
+
+- Dashboard : lien dans l'output `DashboardUrl` (console CloudWatch → *Dashboards* → `recherche-emploi-dev`).
+- Traces X-Ray : console **CloudWatch → X-Ray traces** (ou *Service map*), région `eu-west-3`.
+
+### 7.3 Coût
+
+À l'échelle de ce projet, l'ensemble reste **dans le free tier** (métriques AWS standard gratuites,
+< 5 Go de logs, < 100 000 traces, 10 alarmes et 3 dashboards offerts). Pour garder la maîtrise à plus
+grande échelle : baisser `LogRetentionDays`, éviter les métriques custom haute cardinalité, et poser un
+**AWS Budget** avec alerte de coût.
+
+---
+
+## 8. Déployer le front
+
+### 8.1 Renseigner la configuration Cognito + API
 
 Éditer **`recherche-emploi-front/src/environments/environment.prod.ts`** avec les *Outputs* de l'étape 3.1 :
 ```ts
@@ -221,7 +271,7 @@ git commit -m "chore: configure Cognito et API pour l'environnement de prod"
 git push origin master
 ```
 
-### 7.2 Option A — Amplify Hosting (recommandé pour le web)
+### 8.2 Option A — Amplify Hosting (recommandé pour le web)
 
 1. Console AWS → **Amplify** → **Host web app** → source **GitHub** → repo
    `bringandpro-arch/recherche-emploi-front`, branche `master`.
@@ -233,7 +283,7 @@ git push origin master
    sam deploy --parameter-overrides Stage=dev CorsOrigin=https://master.xxxx.amplifyapp.com
    ```
 
-### 7.2 Option B — Tester en local
+### 8.3 Option B — Tester en local
 ```bash
 cd C:/dev/projets/recherche_emploi/recherche-emploi-front
 npm install
@@ -242,9 +292,9 @@ ionic serve        # http://localhost:8100   (ou: npm start -> http://localhost:
 
 ---
 
-## 8. Créer le premier utilisateur et son profil
+## 9. Créer le premier utilisateur et son profil
 
-### 8.1 Via l'app (recommandé)
+### 9.1 Via l'app (recommandé)
 1. Ouvrir le front (URL Amplify ou `localhost`).
 2. Onglet **« Créer un compte »** → email + mot de passe (politique Cognito : **≥ 10 caractères**, au
    moins une minuscule, une majuscule, un chiffre).
@@ -253,7 +303,7 @@ ionic serve        # http://localhost:8100   (ou: npm start -> http://localhost:
    localisations, % télétravail mini, TJM/salaire cible, mots-clés exclus, **seuil de notification**,
    **Telegram chat id** (optionnel). Enregistrer (`PUT /profile`).
 
-### 8.2 Alternative — créer l'utilisateur en console / CLI
+### 9.2 Alternative — créer l'utilisateur en console / CLI
 ```
 aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --region eu-west-3 \
   --username <email> --user-attributes Name=email,Value=<email> Name=email_verified,Value=true
@@ -264,7 +314,7 @@ aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --region eu-west-3
 
 ---
 
-## 9. (Optionnel) Domaines personnalisés + HTTPS
+## 10. (Optionnel) Domaines personnalisés + HTTPS
 
 Cibles : web `emplois.cachi.fr`, API `api.emplois.cachi.fr`.
 
@@ -279,7 +329,7 @@ Cibles : web `emplois.cachi.fr`, API `api.emplois.cachi.fr`.
 
 ---
 
-## 10. Ajuster la fréquence du scan
+## 11. Ajuster la fréquence du scan
 
 Le cron par défaut est `rate(3 hours)`. Pour changer (ex. toutes les 6 h) :
 ```
@@ -289,7 +339,7 @@ Expressions possibles : `rate(N hours|minutes)` ou `cron(...)` (syntaxe EventBri
 
 ---
 
-## 11. Dépannage
+## 12. Dépannage
 
 | Symptôme | Piste |
 |---|---|
@@ -299,6 +349,7 @@ Expressions possibles : `rate(N hours|minutes)` ou `cron(...)` (syntaxe EventBri
 | Aucune offre France Travail/Adzuna | Secrets SSM absents/incorrects → voir étape 4 ; vérifier les logs scan (étape 6.3) |
 | Pas de notification Telegram | `TELEGRAM_BOT_TOKEN` manquant, ou aucun `chat_id` (ni profil ni SSM), ou aucune offre ≥ seuil |
 | Logs IA « repli sur le score de règles » | Accès Bedrock non activé (étape 5) ou région incorrecte |
+| Pas d'email d'alerte CloudWatch | Abonnement SNS non confirmé (cliquer le lien reçu) ou `AlarmEmail` non fourni (étape 7.1) |
 | `sam deploy` : bucket S3 | `resolve_s3 = true` gère le bucket ; sinon `sam deploy --guided` |
 
 Logs détaillés (français) :
@@ -309,7 +360,7 @@ sam logs --stack-name recherche-emploi-back --name ApiFunction  --region eu-west
 
 ---
 
-## 12. Mettre à jour l'application
+## 13. Mettre à jour l'application
 
 ```bash
 # Backend : rebuild + redeploy
@@ -320,7 +371,7 @@ cd C:/dev/projets/recherche_emploi/recherche-emploi-back && mvn clean package &&
 
 ---
 
-## 13. Tout supprimer (éviter les coûts)
+## 14. Tout supprimer (éviter les coûts)
 
 ```
 sam delete --stack-name recherche-emploi-back --region eu-west-3
