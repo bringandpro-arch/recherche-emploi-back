@@ -9,45 +9,56 @@ _Dernière mise à jour : 2026-06-18_
 
 | Élément | Statut |
 |---|---|
-| Conception fonctionnelle (personas, parcours, features F1–F16) | ✅ |
-| Conception technique (architecture, stack, modèle de données, sécurité, scheduling) | ✅ |
+| Conception fonctionnelle (personas, parcours, features F1–F17) | ✅ |
+| Conception technique (AWS serverless, modèle de données, sécurité, scheduling) | ✅ |
 | Catalogue des sources (§5) | ✅ |
-| `PLAN.md` | ✅ |
+| `PLAN.md` (révisé post-arbitrages) | ✅ |
 | `ETAT_AVANCEMENT.md` | ✅ |
 | `CLAUDE.md` (back + front) | ✅ |
 | `.claude/settings.json` (back + front) | ✅ |
 | `.env.example` + `.gitignore` + `.gitattributes` (back + front) | ✅ |
 | `prompts/` (templates LLM) | ✅ |
-| Bloc unique d'arbitrages payants posé au commanditaire | ✅ |
+| Bloc unique d'arbitrages payants posé + **tranché** | ✅ |
+
+### Arbitrages validés (2026-06-18)
+
+- **Hébergement** : AWS serverless (Lambda + API Gateway + EventBridge + DynamoDB), IaC SAM. _Motif : coût ~0–2 €/mois + entraînement certifs AWS._
+- **IA** : Amazon Bedrock / Claude Haiku (scoring + extraction), Sonnet pour le pitch. Budget plafonné ~3–8 €/mois.
+- **Sources** : tiers gratuits uniquement.
+- **Auth** : Amazon Cognito (multi-utilisateur dès le MVP).
+- **Front** : AWS Amplify Hosting ; domaines `emplois.cachi.fr` (web) / `api.emplois.cachi.fr` (API) ; HTTPS ACM. _(à confirmer : cachi.fr vs cachis.fr)_
+- **Mobile** : Capacitor (V1.1).
+- **Budget total estimé** : ~5–10 €/mois (moins la 1ʳᵉ année).
 
 ## Phase 2 — Mode Développeur (MVP)
 
 | # | Feature | Statut | Notes |
 |---|---|---|---|
-| F1 | Modèle de données + socle backend | ⬜ | Spring Boot 3 / Java 21 / Postgres / Flyway / Docker |
-| F2 | Profil de compétences (API + persistance) | ⬜ | |
-| F3 | Interface `JobSource` + connecteurs (≥ 2–3 réels) | ⬜ | France Travail, Adzuna, Remotive |
-| F4 | Normalisation des offres | ⬜ | |
-| F5 | Déduplication inter-sources + historique | ⬜ | |
-| F6 | Scoring / matching (règles + IA) | ⬜ | `LlmProvider` |
-| F7 | Scan périodique automatique | ⬜ | `@Scheduled` |
-| F8 | Notification Telegram | ⬜ | |
-| F9 | Filtrage freelance/CDI + localisation/remote | ⬜ | |
-| F10 | Front Ionic (profil + liste + détail) | ⬜ | Ionic + Angular + Tailwind |
+| F1 | Socle serverless + IaC (SAM, DynamoDB, API GW, Cognito, CloudWatch) | ⬜ | |
+| F2 | Authentification Cognito (sign-up/login, JWT authorizer) | ⬜ | |
+| F3 | Profil de compétences (API + DynamoDB, scoping userId) | ⬜ | |
+| F4 | Interface `JobSource` + connecteurs (France Travail, Adzuna, Remotive) | ⬜ | |
+| F5 | Normalisation des offres | ⬜ | |
+| F6 | Déduplication + historique | ⬜ | |
+| F7 | Scoring (règles + IA Bedrock via `LlmProvider`) | ⬜ | |
+| F8 | Scan périodique (EventBridge Scheduler → Lambda) | ⬜ | |
+| F9 | Notification Telegram | ⬜ | |
+| F10 | Filtrage freelance/CDI + localisation/remote | ⬜ | |
+| F11 | Front Ionic + Amplify + domaine (login Cognito, profil, liste, détail) | ⬜ | |
 
 ## Phase 2 — V1.1+ (après MVP)
 
 | # | Feature | Statut |
 |---|---|---|
-| F11 | IA — extraction structurée des offres | ⬜ |
-| F12 | IA — détection CDI → mission freelance | ⬜ |
-| F13 | IA — génération de pitch / lettre | ⬜ |
-| F14 | Feedback utilisateur → ré-apprentissage scoring | ⬜ |
-| F15 | Sources additionnelles (Jooble, The Muse, Free-Work, RSS) | ⬜ |
-| F16 | Authentification + multi-utilisateur | ⬜ |
+| F12 | IA — extraction structurée des offres | ⬜ |
+| F13 | IA — détection CDI → mission freelance | ⬜ |
+| F14 | IA — génération de pitch / lettre (Sonnet) | ⬜ |
+| F15 | Feedback utilisateur → ré-apprentissage scoring | ⬜ |
+| F16 | Sources additionnelles (Jooble, The Muse, Free-Work, RSS) | ⬜ |
+| F17 | App mobile (Capacitor Android/iOS) | ⬜ |
 
 ## Journal
 
-- **2026-06-18** — Phase 1 terminée : conception fonctionnelle + technique, catalogue sources, fichiers
-  versionnés (PLAN, ETAT, CLAUDE x2, settings, env/gitignore, prompts). Bloc d'arbitrages payants posé.
-  Démarrage Phase 2 sur les valeurs par défaut recommandées (Spring Boot/Hetzner, LLM Anthropic, sources gratuites).
+- **2026-06-18** — Phase 1 terminée et fichiers versionnés/poussés (back `06982f4`, front `2878103`).
+  Arbitrages tranchés avec le commanditaire → bascule de la conception vers **AWS serverless + Cognito +
+  Bedrock + Amplify + multi-utilisateur**. PLAN/ETAT révisés. Démarrage Phase 2 sur F1.

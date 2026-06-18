@@ -1,7 +1,8 @@
 # PLAN — Logiciel de recherche d'offres d'emploi
 
-> Conception fonctionnelle + technique. Document de référence rédigé en **Phase 1 (Mode Plan)**.
-> Toute évolution majeure se reflète ici ; l'avancement réel est suivi dans [`ETAT_AVANCEMENT.md`](./ETAT_AVANCEMENT.md).
+> Conception fonctionnelle + technique. Document de référence rédigé en **Phase 1 (Mode Plan)**,
+> mis à jour après les arbitrages du commanditaire (architecture **AWS serverless**).
+> Avancement réel suivi dans [`ETAT_AVANCEMENT.md`](./ETAT_AVANCEMENT.md).
 
 ---
 
@@ -14,8 +15,19 @@ pertinentes non encore vues. Scan **périodique automatique**. L'IA est isolée 
 et utilisée uniquement là où elle apporte une vraie valeur (scoring sémantique, extraction structurée,
 détection CDI→freelance, génération de pitch).
 
-Cible initiale : **un seul utilisateur** (architecte freelance senior Cloud/DevOps/Observabilité/IA,
-région Lyon), cherchant **missions freelance ET CDI**. Conçu proprement pour extension multi-utilisateurs.
+Cible : architecte freelance senior (Cloud/DevOps/Observabilité/IA, Lyon) cherchant **freelance ET CDI**.
+**Multi-utilisateur dès le MVP** (auth Cognito) — le commanditaire est le premier utilisateur.
+
+**Décisions d'architecture (arbitrages validés)** :
+- **Backend : AWS serverless** (Lambda + API Gateway + EventBridge Scheduler + DynamoDB), IaC **AWS SAM**.
+  Choisi pour le coût quasi nul à cette échelle **et** la valeur d'entraînement (certifs AWS DVA/SAA).
+- **Auth : Amazon Cognito** (user pool, login web + mobile).
+- **IA : Amazon Bedrock** (Claude Haiku pour le scoring/extraction de masse), derrière l'interface `LlmProvider`.
+- **Front : Ionic + Angular + Capacitor + Tailwind**, hébergé sur **AWS Amplify Hosting**.
+- **Sources : tiers gratuits uniquement** (France Travail, Adzuna dev, Remotive…).
+- **Domaine** : web `emplois.cachi.fr`, API `api.emplois.cachi.fr` (HTTPS via ACM).
+
+**Budget estimé : ~5–10 €/mois** (infra ~0–2 € + Bedrock ~3–8 €, plafonné), moins la 1ʳᵉ année.
 
 ---
 
@@ -25,233 +37,240 @@ région Lyon), cherchant **missions freelance ET CDI**. Conçu proprement pour e
 
 | Persona | Description | Besoins clés |
 |---|---|---|
-| **P1 — Le commanditaire (Alex)** | Architecte freelance senior, Cloud/DevOps/Observabilité/IA, Lyon. Cherche freelance (TJM) et CDI (cadre). | Recevoir vite des offres pertinentes, filtrer freelance/CDI, ne pas se noyer dans le bruit, ne pas revoir 2× la même offre. |
-| **P2 — Profil tech générique (futur)** | Dev / data / ops cherchant un poste. | Mêmes besoins, paramétrage de profil différent. Justifie une conception générique. |
-| **P3 — Administrateur (= Alex au départ)** | Gère les sources, les clés API, les seuils de scoring. | Configurer sans toucher au code ; observer les scans (logs lisibles en français). |
+| **P1 — Le commanditaire (Alex)** | Architecte freelance senior, Cloud/DevOps/Observabilité/IA, Lyon. Freelance (TJM) + CDI (cadre). | Recevoir vite des offres pertinentes, filtrer freelance/CDI, éviter le bruit et les doublons. |
+| **P2 — Profil tech générique** | Dev / data / ops cherchant un poste. | Mêmes besoins, profil différent → conception générique + multi-utilisateur (Cognito). |
+| **P3 — Administrateur (= Alex)** | Gère sources, clés, seuils. | Configurer sans toucher au code ; observer les scans (logs FR). |
 
 ### 1.2 Parcours utilisateur (MVP)
 
-1. **Onboarding profil** → l'utilisateur saisit compétences, types de contrat (freelance/CDI), localisations
-   (Paris, Lyon, full remote…), % remote souhaité, TJM cible et/ou salaire cible, mots-clés à exclure.
-2. **Scan automatique** (cron) → le backend interroge les sources, normalise, dédoublonne, score.
-3. **Notification** → les offres au-dessus du seuil de pertinence partent sur Telegram (lien + résumé + score).
-4. **Consultation** → l'utilisateur ouvre l'app Ionic, voit la liste triée par score, filtre (freelance/CDI,
-   localisation, remote), ouvre le détail, clique vers l'offre source.
-5. **Feedback (post-MVP)** → l'utilisateur marque « intéressé / pas intéressé », ce qui affine le scoring.
+1. **Inscription / connexion** (Cognito) sur `emplois.cachi.fr`.
+2. **Onboarding profil** → compétences, contrat (freelance/CDI), localisations (Paris, Lyon, full remote…),
+   % remote, TJM/salaire cible, mots-clés exclus.
+3. **Scan automatique** (EventBridge → Lambda) → fetch sources, normalise, dédoublonne, score.
+4. **Notification Telegram** → offres au-dessus du seuil (lien + résumé + score).
+5. **Consultation** → liste triée par score, filtres (freelance/CDI, localisation, remote), détail + lien source.
+6. **Feedback (post-MVP)** → pouce haut/bas affine le scoring.
 
 ### 1.3 Liste des features (numérotées, priorisées)
 
-> Ordre = ordre de réalisation en Phase 2. **MVP** = Definition of Done du brief. **V1.1+** = ensuite.
+> Ordre = ordre de réalisation Phase 2. **MVP** = Definition of Done du brief (+ auth Cognito demandée).
 
 | # | Feature | Priorité | Description |
 |---|---|---|---|
-| **F1** | Modèle de données + socle backend | MVP | Entités, migrations, structure Spring Boot, config, Docker. |
-| **F2** | Profil de compétences (API + persistance) | MVP | CRUD du profil (compétences, contrat, localisation, remote, TJM/salaire, exclusions). Mono-profil au départ. |
-| **F3** | Interface `JobSource` + connecteurs | MVP | Contrat commun + connecteurs : France Travail, Adzuna, Remotive (≥ 2–3 réels). RSS générique en option. |
-| **F4** | Normalisation des offres | MVP | Mapping vers un modèle commun (contrat, lieu, remote %, stack, salaire/TJM). |
-| **F5** | Déduplication inter-sources | MVP | Hash + matching flou (titre + entreprise + localisation) ; historique « déjà vu ». |
-| **F6** | Scoring / matching | MVP | Score de pertinence règles + couche IA (sémantique) derrière interface. Score de confiance ≠ probabilité. |
-| **F7** | Scan périodique automatique | MVP | Scheduler (cron) : fetch → normalise → dédoublonne → score → notifie. |
-| **F8** | Notification Telegram | MVP | Bot BotFather ; message lien + résumé + score ; pas de doublon de notif. |
-| **F9** | Filtrage freelance/CDI + localisation/remote | MVP | Filtres appliqués au scan et exposés à l'API/front. |
-| **F10** | Front Ionic (profil + liste + détail) | MVP | Saisie profil, liste triée par score, filtres, écran détail. |
-| **F11** | IA — extraction structurée des offres | V1.1 | LLM extrait stack/TJM/remote des descriptions peu structurées. |
-| **F12** | IA — détection CDI → mission freelance | V1.1 | Heuristiques + LLM pour repérer les CDI « ouvrables » en freelance. |
-| **F13** | IA — génération de pitch / lettre | V1.2 | Pitch court personnalisé par offre (à la demande). |
-| **F14** | Feedback utilisateur → ré-apprentissage du scoring | V1.2 | Pouce haut/bas, ajuste les poids. |
-| **F15** | Sources additionnelles (Jooble, The Muse, Free-Work, RSS) | V1.1 | Élargissement du catalogue de connecteurs. |
-| **F16** | Authentification + multi-utilisateur | V2 | Comptes, isolation des profils. Conçu mais non implémenté au MVP. |
+| **F1** | Socle serverless + IaC | MVP | SAM template, DynamoDB, API Gateway, EventBridge, Cognito user pool, CloudWatch, build/deploy. |
+| **F2** | Authentification Cognito | MVP | Sign-up/login, JWT authorizer sur l'API, scoping `userId`. |
+| **F3** | Profil de compétences (API + DynamoDB) | MVP | CRUD profil par utilisateur (compétences, contrat, localisation, remote, TJM/salaire, exclusions). |
+| **F4** | Interface `JobSource` + connecteurs | MVP | Contrat commun + connecteurs réels : France Travail, Adzuna, Remotive (≥ 2–3). |
+| **F5** | Normalisation des offres | MVP | Mapping vers modèle commun (contrat, lieu, remote %, stack, salaire/TJM, devise). |
+| **F6** | Déduplication + historique | MVP | Hash + matching flou (titre+entreprise+lieu) ; `SeenOffer` anti-re-notification. |
+| **F7** | Scoring / matching | MVP | Règles déterministes + couche IA (Bedrock) derrière `LlmProvider`. Confiance **indicative, non probabiliste**. |
+| **F8** | Scan périodique automatique | MVP | EventBridge Scheduler → Lambda : fetch → normalise → dédoublonne → score → notifie. |
+| **F9** | Notification Telegram | MVP | Bot BotFather ; message lien + résumé + score ; pas de doublon. |
+| **F10** | Filtrage freelance/CDI + localisation/remote | MVP | Filtres au scan et exposés à l'API/front. |
+| **F11** | Front Ionic + Amplify + domaine | MVP | Login Cognito, profil, liste triée, filtres, détail. Amplify Hosting, `emplois.cachi.fr`, HTTPS. |
+| **F12** | IA — extraction structurée | V1.1 | LLM extrait stack/TJM/remote des descriptions libres. |
+| **F13** | IA — détection CDI → freelance | V1.1 | Heuristiques + LLM pour repérer les CDI « ouvrables » en mission. |
+| **F14** | IA — génération de pitch / lettre | V1.2 | Pitch court personnalisé par offre, à la demande (Sonnet). |
+| **F15** | Feedback utilisateur → ré-apprentissage scoring | V1.2 | Pouce haut/bas ajuste les poids. |
+| **F16** | Sources additionnelles (Jooble, The Muse, Free-Work, RSS) | V1.1 | Élargissement du catalogue. |
+| **F17** | App mobile (Capacitor Android/iOS) | V1.1 | Build natif de l'app Ionic (web déjà mobile-ready au MVP). |
 
 ---
 
 ## 2. Conception technique
 
-### 2.1 Vue d'ensemble
+### 2.1 Vue d'ensemble (AWS serverless)
 
 ```
-┌────────────────────────┐        ┌──────────────────────────────────────────────┐
-│  Front Ionic (Angular) │  HTTPS │            Backend Spring Boot                 │
-│  Capacitor + Tailwind  │ <────> │  REST API  ──  Service Profil                  │
-│  - écran Profil        │        │            ──  Service Scan (scheduler @cron)  │
-│  - liste offres + score│        │            ──  Ingestion (connecteurs)         │
-│  - filtres / détail    │        │            ──  Normalisation / Dédup           │
-└────────────────────────┘        │            ──  Scoring (règles + LlmProvider)  │
-                                   │            ──  Notifier Telegram               │
-                                   └──────┬───────────────┬─────────────┬──────────┘
-                                          │               │             │
-                                   ┌──────▼─────┐  ┌───────▼──────┐ ┌────▼─────────┐
-                                   │ PostgreSQL │  │ Sources web  │ │ LLM provider │
-                                   │ (Docker)   │  │ (API/RSS)    │ │ (interface)  │
-                                   └────────────┘  └──────────────┘ └──────────────┘
+        emplois.cachi.fr (Amplify Hosting + CloudFront + ACM)
+   ┌─────────────────────────────┐
+   │  Front Ionic / Angular      │   login Cognito (libs Amplify)
+   │  Capacitor + Tailwind       │
+   └──────────────┬──────────────┘
+                  │ HTTPS  (api.emplois.cachi.fr)
+        ┌─────────▼──────────────────────────────────────────────┐
+        │  API Gateway (HTTP API) + Cognito JWT Authorizer        │
+        └─────────┬───────────────────────────────────────────────┘
+                  │
+        ┌─────────▼─────────┐        ┌──────────────────────────────┐
+        │  Lambda  (Java 21)│        │  EventBridge Scheduler (cron) │
+        │  - API handlers   │        └───────────────┬──────────────┘
+        │  - Scan handler   │ <──────────────────────┘ déclenche le scan
+        └───┬───────┬───────┘
+            │       │            ┌──────────────┐   ┌──────────────────┐
+   ┌────────▼──┐ ┌──▼─────────┐  │ Sources web  │   │ Bedrock (Claude) │
+   │ DynamoDB  │ │ SSM Params │  │ (API/RSS)    │   │ via LlmProvider  │
+   │ (tables)  │ │ + secrets  │  └──────────────┘   └──────────────────┘
+   └───────────┘ └────────────┘            │
+                                   ┌────────▼────────┐
+                                   │ Telegram Bot API│
+                                   └─────────────────┘
 ```
 
 ### 2.2 Choix de stack (argumenté)
 
-**Backend : Spring Boot 3 (Java 21) sur VPS Hetzner existant — recommandé.**
+- **Compute : AWS Lambda (Java 21)**, handlers simples (aws-lambda-java-core/-events) + AWS SDK v2.
+  Pas de VPC (DynamoDB/Bedrock/Telegram sont sur Internet → accès sortant par défaut, **pas de NAT Gateway**).
+- **API : API Gateway HTTP API** + **autorizer JWT Cognito**. Moins cher/plus simple que REST API ; pas d'ALB.
+- **Persistance : DynamoDB on-demand** (pas de RDS → pas de coût fixe). Modèle à quelques tables (§2.3).
+- **Scheduling : EventBridge Scheduler** (cron configurable) → invoque la Lambda de scan.
+- **Auth : Amazon Cognito** (user pool). JWT vérifié par l'authorizer API Gateway ; `userId` = `sub`.
+- **IA : Amazon Bedrock** via l'interface `LlmProvider` (port). Impl. `BedrockLlmProvider` (Claude Haiku par
+  défaut pour le scoring/extraction ; Sonnet pour le pitch). Impl. `NoopLlmProvider` pour désactiver/tester.
+- **Secrets/config : SSM Parameter Store** (SecureString, gratuit pour params standard) — clés sources,
+  token Telegram, paramètres de scan. Jamais en dur.
+- **IaC : AWS SAM** (template.yaml) — proche des domaines d'examen DVA, simple à déployer (`sam build && sam deploy`).
+- **Front : Ionic + Angular + Capacitor + Tailwind** (imposé), **Amplify Hosting** (CI/CD + CloudFront + ACM).
+- **Observabilité : CloudWatch Logs** (logs FR), métriques de scan via `ScanRun`.
 
-- *Pourquoi pas AWS serverless* : pour un usage **mono-utilisateur** avec scans périodiques et un bot
-  Telegram, le serverless ajoute de la complexité (Lambda cold start, packaging, IAM, DynamoDB single-table)
-  sans bénéfice réel à ce volume. Le **VPS Hetzner existe déjà** → coût marginal ≈ nul, déploiement Docker simple,
-  scheduler natif (`@Scheduled`), état relationnel facile (Postgres). Chiffrage comparatif au §7.
-- Java 21 + Maven (présents sur le poste). Architecture hexagonale légère : `domain` / `application` /
-  `infrastructure` (connecteurs, persistance, LLM, Telegram = adapters remplaçables).
+*Pourquoi serverless plutôt que Spring Boot/Hetzner* : à cette échelle le coût est négligeable des deux côtés ;
+le serverless apporte ici une **valeur d'entraînement aux certifications AWS** (Lambda, API GW, DynamoDB,
+EventBridge, Cognito, IAM, CloudWatch, SAM) demandée par le commanditaire.
 
-**Frontend : Ionic + Capacitor + Angular + Tailwind** (imposé). Web + mobile (Android via Capacitor) depuis
-une base unique. Tailwind pour le style ; composants Ionic pour l'UX mobile.
+### 2.3 Modèle de données (DynamoDB, multi-utilisateur)
 
-**Base de données : PostgreSQL** (Docker). Relationnel adapté au modèle (profil, offres, historique, scores).
-Migrations via **Flyway**.
-
-**IA : interface `LlmProvider`** (port hexagonal). Implémentation par défaut **Anthropic Claude**
-(modèle configurable). Provider remplaçable (OpenAI, Mistral, local…) sans toucher au domaine.
-Le score de confiance IA est explicitement présenté comme **indicatif, non probabiliste**.
-
-**Scheduling : Spring `@Scheduled`** (cron configurable). Pas d'EventBridge nécessaire sur VPS.
-
-**Déploiement : Docker Compose** sur le VPS (services : `app`, `postgres`). Reverse-proxy
-(Caddy/Traefik) pour TLS si exposition publique du front/API.
-
-### 2.3 Modèle de données (entités principales)
+Tables (on-demand) — `userId` = `sub` Cognito :
 
 ```
-Profile
-  id, label, contractTypes[FREELANCE|CDI], locations[], remoteMin(%), 
-  targetTjmMin, targetSalaryMin, skills[], keywords[], excludedKeywords[], 
-  notifyThreshold, active, createdAt, updatedAt
+Profiles        PK=userId
+  label, contractTypes[FREELANCE|CDI], locations[], remoteMin, targetTjmMin,
+  targetSalaryMin, skills[{name,weight}], keywords[], excludedKeywords[],
+  notifyThreshold, telegramChatId, active, createdAt, updatedAt
 
-Skill            (id, profileId, name, weight)            -- pondération par compétence
-JobSourceConfig  (id, code, enabled, rateLimitPerMin, lastRunAt, config(jsonb))
+Offers          PK=dedupKey            (pool global d'offres normalisées)
+  source, sourceExternalId, title, company, locationRaw, city, country,
+  remotePercent, contractType, salaryMin, salaryMax, tjmMin, tjmMax, currency,
+  stack[], url, descriptionRaw, descriptionExtracted(json IA), publishedAt, fetchedAt
+  GSI1: source#sourceExternalId  (idempotence d'ingestion)
 
-JobOffer
-  id, source(code), sourceExternalId, title, company, locationRaw, city, country,
-  remotePercent, contractType(FREELANCE|CDI|CDD|UNKNOWN), 
-  salaryMin, salaryMax, tjmMin, tjmMax, currency, stack[], url, descriptionRaw,
-  descriptionExtracted(jsonb, IA), publishedAt, fetchedAt, fingerprint(hash), dedupKey
+ScoredOffers    PK=userId  SK=offerDedupKey
+  score(0..100), ruleScore, llmScore, reasons[], confidenceLabel, scoredAt
+  GSI: userId + score  (tri par pertinence)
 
-ScoredOffer
-  id, jobOfferId, profileId, score(0..100), ruleScore, llmScore, 
-  reasons[], confidenceLabel, scoredAt
+SeenOffers      PK=userId  SK=dedupKey  (historique anti-re-notification)
+  firstSeenAt
 
-SeenOffer        (id, profileId, dedupKey, firstSeenAt)   -- historique anti-doublon
-NotificationLog  (id, profileId, jobOfferId, channel(TELEGRAM), sentAt, status, payloadHash)
-ScanRun          (id, startedAt, endedAt, status, sourcesQueried, fetched, new, notified, errorSummary)
+ScanRuns        PK=scanId
+  startedAt, endedAt, status, sourcesQueried, fetched, new, notified, errorSummary
+
+Notifications   PK=userId  SK=sentAt#offerDedupKey
+  channel(TELEGRAM), status, payloadHash
 ```
 
-Index clés : `JobOffer(dedupKey)`, `SeenOffer(profileId, dedupKey)`, `JobOffer(source, sourceExternalId)`.
+> Option « single-table design » possible plus tard (pattern avancé DVA/SAA) ; on démarre en multi-tables
+> (plus lisible) vu le faible volume.
 
-### 2.4 Sources de données — voir §5 pour le détail. Ingestion **pluggable** :
+### 2.4 Ingestion pluggable — voir §5
 
 ```java
 interface JobSource {
-    String code();                       // "france-travail", "adzuna", ...
+    String code();
     boolean enabled();
-    List<RawJob> fetch(SearchCriteria c); // critères dérivés du profil
+    List<RawJob> fetch(SearchCriteria criteria);
 }
 ```
 
-Un connecteur par source. Module **scraping** isolé, **désactivé par défaut**, basse fréquence, clairement
-signalé, uniquement pour sources sans API/RSS.
+Un connecteur par source, activation par config (SSM). Module **scraping** isolé, **désactivé par défaut**,
+basse fréquence, signalé, seulement pour sources sans API/RSS.
 
 ### 2.5 Normalisation, déduplication, historique
 
-- **Normalisation (F4)** : mapping des champs hétérogènes → modèle commun (contrat, ville/pays, remote %,
-  stack détectée par mots-clés + IA optionnelle, salaire/TJM avec devise).
-- **Déduplication (F5)** : `dedupKey` = normalisation(titre) + normalisation(entreprise) + ville ; matching
-  **flou** (Jaro-Winkler / token-set) pour rapprocher les quasi-doublons inter-sources.
-- **Historique (F5)** : `SeenOffer` empêche de re-notifier une offre déjà signalée (même via une autre source).
+- **Normalisation (F5)** : champs hétérogènes → modèle commun (contrat, ville/pays, remote %, stack par
+  mots-clés + IA optionnelle, salaire/TJM + devise).
+- **Déduplication (F6)** : `dedupKey` = norm(titre)+norm(entreprise)+ville ; matching **flou**
+  (Jaro-Winkler / token-set) pour les quasi-doublons inter-sources.
+- **Historique (F6)** : `SeenOffers` empêche de re-notifier une offre déjà signalée (même via une autre source).
 
-### 2.6 Scoring / matching (F6)
+### 2.6 Scoring / matching (F7)
 
-Score final `0..100` = combinaison **pondérée** :
-1. **Couche règles** (déterministe, rapide, gratuite) : recouvrement compétences/stack, type de contrat,
-   localisation/remote, TJM/salaire vs cible, fraîcheur, mots-clés exclus.
-2. **Couche IA** (sémantique, derrière `LlmProvider`) : pertinence sémantique profil↔offre + courte
-   justification. Activable/désactivable et plafonnée en coût (cf. §7).
+Score `0..100` = combinaison pondérée :
+1. **Couche règles** (déterministe, gratuite) : recouvrement compétences/stack, type de contrat,
+   localisation/remote, TJM/salaire vs cible, fraîcheur, mots-clés exclus. Sert aussi de **pré-filtre**.
+2. **Couche IA** (Bedrock, derrière `LlmProvider`) : pertinence sémantique + justification courte.
+   N'est appelée que pour les offres passant le pré-filtre → **maîtrise du coût**. Activable/désactivable,
+   plafond mensuel configurable.
 
-Le `confidenceLabel` (ex. « élevé / moyen / faible ») est **indicatif** et explicitement **non statistique**.
+`confidenceLabel` (élevé/moyen/faible) = **indicatif**, explicitement **non statistique**.
 
 ### 2.7 Sécurité
 
-- Secrets via **variables d'environnement** / `.env` (jamais en dur, jamais commités). `.env.example` fourni.
-- `.gitignore` strict (`.env`, secrets, build, `node_modules`, `target`).
-- CORS restreint à l'origine du front. Pas d'auth au MVP (mono-utilisateur, API non exposée publiquement
-  par défaut) ; emplacement prévu pour JWT en V2 (F16).
-- Respect des CGU des sources : **pas** de scraper naïf LinkedIn/Indeed/WTTJ/Malt. Scraping optionnel
-  uniquement, désactivé, respectueux.
+- **Auth Cognito** (JWT) sur l'API ; isolation par `userId`.
+- Secrets via **SSM Parameter Store SecureString** (KMS) ; jamais en dur, jamais commités. `.env.example` pour le local.
+- **IAM least-privilege** par Lambda (accès ciblé DynamoDB / Bedrock / SSM / EventBridge).
+- CORS restreint à `https://emplois.cachi.fr` (+ localhost en dev). HTTPS partout (ACM).
+- Respect des CGU : **pas** de scraper naïf LinkedIn/Indeed/WTTJ/Malt. Scraping optionnel, désactivé.
 
 ### 2.8 Scheduling & déploiement
 
-- `@Scheduled(cron = "${scan.cron}")` — fréquence configurable (ex. toutes les 2–4 h).
-- Déploiement **Docker Compose** sur VPS Hetzner. `app` (jar) + `postgres`. Build front Ionic servi en
-  statique (ou hébergé séparément). Logs **en français**, lisibles.
+- **EventBridge Scheduler** (cron configurable, ex. toutes les 3 h) → Lambda de scan.
+- **Déploiement** : `sam build && sam deploy` (CloudFormation). Front : `amplify`/console Amplify branchée
+  sur le repo Git (CI/CD), domaine `emplois.cachi.fr`. API : custom domain `api.emplois.cachi.fr` + ACM.
+- Logs **en français**, lisibles (CloudWatch).
 
 ### 2.9 Conventions
 
-- **Commits** : Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`…), atomiques, push après chaque feature.
-- **Windows / fins de ligne** : `.gitattributes` pour normaliser LF côté scripts ; chemins relatifs côté code.
-- Messages de log et de statut **en français**.
-- Détails par repo dans les `CLAUDE.md` respectifs.
+- **Commits** Conventional Commits, atomiques, push après chaque feature, sur les deux repos.
+- **Windows / fins de ligne** : `.gitattributes` (LF), chemins relatifs.
+- Logs/statuts **en français**. Détails par repo dans les `CLAUDE.md`.
 
 ---
 
-## 3. Découpage Phase 2 (réalisation)
+## 3. Découpage Phase 2
 
-Réalisation **feature par feature** dans l'ordre F1 → F10 (MVP), puis F11+. Après chaque feature :
-mise à jour de [`ETAT_AVANCEMENT.md`](./ETAT_AVANCEMENT.md), commit conventionnel, push sur les deux repos.
+Réalisation feature par feature F1 → F11 (MVP), puis F12+. Après chaque feature : mise à jour de
+[`ETAT_AVANCEMENT.md`](./ETAT_AVANCEMENT.md), commit conventionnel, push sur les deux repos.
 
 ---
 
-## 4. Hypothèses & valeurs par défaut retenues (modifiables via §7)
+## 4. Décisions retenues (arbitrages tranchés)
 
-- Backend **Spring Boot sur Hetzner** (recommandé) — construit par défaut sur cette base.
-- LLM par défaut **Anthropic Claude**, modèle économique pour le scoring de masse, derrière interface.
-- Sources de départ : **tiers gratuits** (France Travail, Adzuna dev, Remotive). Élargissement ensuite.
-- Pas de nom de domaine au MVP (accès direct / IP / sous-domaine du VPS).
+- Backend **AWS serverless** (Lambda Java 21 + API Gateway + EventBridge + DynamoDB), IaC **SAM**.
+- Auth **Cognito** (multi-utilisateur dès le MVP).
+- IA **Bedrock / Claude Haiku** (scoring + extraction), Sonnet pour le pitch, derrière `LlmProvider`. Budget plafonné.
+- Sources **gratuites** (France Travail, Adzuna dev, Remotive au MVP).
+- Front **Amplify Hosting**, domaine **`emplois.cachi.fr`** (web) / **`api.emplois.cachi.fr`** (API), HTTPS ACM.
+- App **mobile** via Capacitor (V1.1 ; web mobile-ready au MVP).
 
 ---
 
 ## 5. Catalogue des sources de données
 
-> Vérifier les conditions d'accès **à jour** au moment de l'intégration. Statuts ci-dessous = état de
-> conception ; chaque connecteur documente sa vérification réelle dans le code.
+> Vérifier les conditions d'accès **à jour** à l'intégration. Chaque connecteur documente sa vérification réelle.
 
 | Source | Accès | Gratuité | Couverture | Limites / notes |
 |---|---|---|---|---|
-| **France Travail** (ex Pôle Emploi) — API « Offres d'emploi v2 » | **API officielle** (OAuth2 client credentials) | Gratuit (inscription + appli sur le portail développeur) | Large CDI/CDD/alternance FR | Quotas d'appel ; scope à demander ; **source prioritaire MVP**. |
-| **Adzuna** — API agrégateur | **API officielle** (`app_id` + `app_key`) | Free tier dev (quota requêtes/mois) | Agrégateur multi-pays (FR inclus) | Champs salaire estimés ; pagination ; **MVP**. |
-| **Remotive** — remote tech | **API publique JSON** | Gratuit, sans clé (usage raisonnable) | Remote tech | Anglophone surtout ; **MVP** (full remote). |
-| **RemoteOK** — remote tech | **API/JSON publique** | Gratuit (attribution demandée) | Remote tech | Respecter rate limit/CGU ; V1.1. |
-| **The Muse** — jobs/tech | **API officielle** (clé gratuite) | Free tier | US/intl, filtrable | V1.1. |
-| **Jooble** — agrégateur | **API** (clé sur demande) | Free/dev | Agrégateur FR inclus | Clé par e-mail ; V1.1. |
-| **APEC** — emploi cadre | **Pas d'API publique officielle** | — | Cadres FR (cœur de cible) | RSS/scraping fragile → **module optionnel désactivé**, basse fréquence, signalé. |
-| **Free-Work** — freelance + CDI tech | **RSS / à vérifier** | À vérifier | Freelance + CDI tech FR | Vérifier API/RSS & CGU ; V1.1. |
-| **Flux RSS divers** (job boards) | **RSS** via connecteur générique | Gratuit | Variable | Connecteur RSS générique paramétrable ; V1.1. |
-| LinkedIn / Indeed / WTTJ / Malt | ❌ **Non** | — | — | Contraire aux CGU, fragile, risqué → **exclus** (pas de scraper naïf). |
-
-**Architecture d'ingestion** : interface `JobSource` commune, un connecteur par source, activation par
-configuration (`JobSourceConfig`). Module scraping isolé et désactivé par défaut.
+| **France Travail** (ex Pôle Emploi) — API « Offres d'emploi v2 » | API officielle (OAuth2 client credentials) | Gratuit (inscription + appli portail dev) | Large CDI/CDD/alternance FR | Quotas ; scope à demander ; **source prioritaire MVP**. |
+| **Adzuna** — API agrégateur | API officielle (`app_id` + `app_key`) | Free tier dev | Agrégateur multi-pays (FR) | Salaire estimé ; pagination ; **MVP**. |
+| **Remotive** — remote tech | API publique JSON | Gratuit, sans clé | Remote tech | Anglophone ; **MVP** (full remote). |
+| **RemoteOK** | API/JSON publique | Gratuit (attribution) | Remote tech | Rate limit ; V1.1. |
+| **The Muse** | API officielle (clé gratuite) | Free tier | US/intl | V1.1. |
+| **Jooble** | API (clé sur demande) | Free/dev | Agrégateur FR | Clé par e-mail ; V1.1. |
+| **APEC** — cadre | Pas d'API publique | — | Cadres FR (cœur de cible) | RSS/scraping fragile → **module optionnel désactivé**. |
+| **Free-Work** — freelance + CDI tech | RSS / à vérifier | À vérifier | Freelance + CDI tech FR | Vérifier API/RSS & CGU ; V1.1. |
+| **Flux RSS divers** | RSS (connecteur générique) | Gratuit | Variable | Paramétrable ; V1.1. |
+| LinkedIn / Indeed / WTTJ / Malt | ❌ Non | — | — | CGU restrictives → **exclus**. |
 
 ---
 
-## 6. Fichiers créés (versionnés)
+## 6. Fichiers versionnés
 
-- `PLAN.md` (ce fichier) — racine.
-- `ETAT_AVANCEMENT.md` — racine, suivi continu.
+- `PLAN.md`, `ETAT_AVANCEMENT.md` (racine + copie dans le repo back pour versioning Git).
 - `recherche-emploi-back/CLAUDE.md`, `recherche-emploi-front/CLAUDE.md`.
-- `.claude/settings.json` (permissions) dans chaque repo.
-- `.env.example` + `.gitignore` + `.gitattributes` dans chaque repo.
-- `recherche-emploi-back/prompts/` — templates de prompts LLM (system / user).
+- `.claude/settings.json`, `.env.example`, `.gitignore`, `.gitattributes` (chaque repo).
+- `recherche-emploi-back/prompts/` — templates LLM (scoring, extraction).
+- À venir (Phase 2) : `template.yaml` (SAM), `samconfig.toml`, code Lambda, `amplify.yml`.
 
 ---
 
-## 7. Arbitrages payants — à valider (bloc unique)
+## 7. Arbitrages payants — TRANCHÉS
 
-Voir la question groupée posée au commanditaire à l'issue de la Phase 1. Synthèse :
+| Sujet | Décision | Coût |
+|---|---|---|
+| Backend / hébergement | **AWS serverless** (entraînement examen + coût négligeable) | ~0–2 €/mois infra |
+| API LLM | **Bedrock / Claude Haiku** (scoring+extraction), Sonnet pour pitch, plafonné | ~3–8 €/mois |
+| APIs job boards | **Tiers gratuits** uniquement | 0 € |
+| Auth | **Cognito** | 0 € (10 000 MAU gratuits) |
+| Hébergement web | **Amplify Hosting** | ~0–1 €/mois |
+| Nom de domaine | Sous-domaines de **cachi.fr** (`emplois` / `api.emplois`) | déjà possédé |
 
-1. **Backend / hébergement** — *Spring Boot sur Hetzner existant (coût marginal ≈ 0 €/mois)* **[recommandé]**
-   vs *AWS serverless* (free tier puis ~quelques €/mois à l'usage, mais complexité accrue).
-2. **API LLM (features IA)** — provider + modèle + budget. Repère de coût Anthropic Claude (au 2026-06) :
-   Haiku 4.5 ≈ 1 $/MTok entrée, 5 $/MTok sortie ; Opus 4.8 ≈ 5 $/25 $. Scoring/extraction = petites
-   requêtes ⇒ budget estimé **quelques € à ~15 €/mois** selon volume de scans. Plafond configurable.
-3. **APIs job boards payantes** — démarrage sur tiers **gratuits** ; passage payant seulement si insuffisant.
-4. **Nom de domaine** — optionnel ; non requis au MVP.
+**Budget total estimé : ~5–10 €/mois** (moins la 1ʳᵉ année). Pièges à 50 € (NAT Gateway, RDS, ALB) écartés par construction.

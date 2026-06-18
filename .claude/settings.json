@@ -10,6 +10,8 @@
       "Bash(mvn:*)",
       "Bash(java:*)",
       "Bash(./mvnw:*)",
+      "Bash(sam:*)",
+      "Bash(aws:*)",
       "Bash(docker:*)",
       "Bash(docker compose:*)",
       "Bash(git add:*)",
