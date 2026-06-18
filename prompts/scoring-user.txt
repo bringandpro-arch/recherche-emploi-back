@@ -1,0 +1,19 @@
+PROFIL :
+- Compétences : {{skills}}
+- Types de contrat recherchés : {{contractTypes}}
+- Localisations : {{locations}}
+- Télétravail minimum souhaité : {{remoteMin}}%
+- TJM cible (freelance) : {{targetTjm}}
+- Salaire cible (CDI) : {{targetSalary}}
+- Mots-clés à exclure : {{excludedKeywords}}
+
+OFFRE :
+- Titre : {{title}}
+- Entreprise : {{company}}
+- Localisation : {{location}}
+- Type de contrat (détecté) : {{contractType}}
+- Télétravail (détecté) : {{remotePercent}}%
+- Rémunération (détectée) : {{compensation}}
+- Description : {{description}}
+
+Évalue la pertinence de cette offre pour ce profil et réponds au format JSON demandé.
