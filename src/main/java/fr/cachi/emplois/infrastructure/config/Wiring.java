@@ -1,10 +1,12 @@
 package fr.cachi.emplois.infrastructure.config;
 
 import fr.cachi.emplois.application.DedupService;
+import fr.cachi.emplois.application.OfferEnricher;
 import fr.cachi.emplois.application.OfferNormalizer;
 import fr.cachi.emplois.application.ProfileService;
 import fr.cachi.emplois.application.ScanService;
 import fr.cachi.emplois.application.ScoringService;
+import fr.cachi.emplois.domain.port.LlmProvider;
 import fr.cachi.emplois.domain.port.ProfileRepository;
 import fr.cachi.emplois.domain.port.ScoredOfferRepository;
 import fr.cachi.emplois.infrastructure.llm.LlmProviders;
@@ -38,11 +40,13 @@ public final class Wiring {
     }
 
     public static ScanService scanService() {
+        LlmProvider llm = LlmProviders.fromEnv();
         return new ScanService(
                 JobSources.all(),
                 new OfferNormalizer(),
+                new OfferEnricher(llm),
                 new DedupService(new DynamoSeenOfferRepository()),
-                new ScoringService(LlmProviders.fromEnv()),
+                new ScoringService(llm),
                 profileRepository(),
                 new DynamoOfferRepository(),
                 scoredOfferRepository(),

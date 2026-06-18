@@ -49,6 +49,15 @@ public final class Prompts {
                 Map.entry("description", truncate(nz(o.descriptionRaw()), 4000))));
     }
 
+    /** Construit le message utilisateur d'extraction structurée (F12) à partir de l'offre. */
+    public static String extractionUser(Offer o) {
+        return fill(load("prompts/extraction-user.txt"), Map.of(
+                "title", nz(o.title()),
+                "company", nz(o.company()),
+                "location", nz(o.locationRaw() != null ? o.locationRaw() : o.city()),
+                "description", truncate(nz(o.descriptionRaw()), 4000)));
+    }
+
     private static String compensation(Offer o) {
         if (o.tjmMin() != null || o.tjmMax() != null) {
             return "TJM " + nz2(o.tjmMin()) + "-" + nz2(o.tjmMax()) + "€";

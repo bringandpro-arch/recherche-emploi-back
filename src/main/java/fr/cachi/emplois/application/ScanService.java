@@ -28,6 +28,7 @@ public class ScanService {
 
     private final List<JobSource> sources;
     private final OfferNormalizer normalizer;
+    private final OfferEnricher enricher;
     private final DedupService dedup;
     private final ScoringService scoring;
     private final ProfileRepository profiles;
@@ -36,11 +37,13 @@ public class ScanService {
     private final Notifier notifier;
     private final ScanRunRepository scanRuns;
 
-    public ScanService(List<JobSource> sources, OfferNormalizer normalizer, DedupService dedup,
-                       ScoringService scoring, ProfileRepository profiles, OfferRepository offers,
-                       ScoredOfferRepository scoredOffers, Notifier notifier, ScanRunRepository scanRuns) {
+    public ScanService(List<JobSource> sources, OfferNormalizer normalizer, OfferEnricher enricher,
+                       DedupService dedup, ScoringService scoring, ProfileRepository profiles,
+                       OfferRepository offers, ScoredOfferRepository scoredOffers, Notifier notifier,
+                       ScanRunRepository scanRuns) {
         this.sources = sources;
         this.normalizer = normalizer;
+        this.enricher = enricher;
         this.dedup = dedup;
         this.scoring = scoring;
         this.profiles = profiles;
@@ -77,8 +80,13 @@ public class ScanService {
 
                 List<ScoredOffer> scored = new ArrayList<>();
                 for (Offer o : unseen) {
-                    ScoreResult result = scoring.score(profile, o);
-                    ScoredOffer so = new ScoredOffer(profile.userId(), o, result, Instant.now());
+                    // Enrichissement IA (F12) : ne porte que sur les offres nouvelles (coût maîtrisé).
+                    Offer enriched = enricher.enrich(o);
+                    if (enriched != o) {
+                        offers.upsert(enriched);
+                    }
+                    ScoreResult result = scoring.score(profile, enriched);
+                    ScoredOffer so = new ScoredOffer(profile.userId(), enriched, result, Instant.now());
                     scoredOffers.save(so);
                     scored.add(so);
                 }

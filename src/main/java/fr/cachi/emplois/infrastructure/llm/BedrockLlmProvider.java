@@ -3,6 +3,8 @@ package fr.cachi.emplois.infrastructure.llm;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import fr.cachi.emplois.domain.model.ContractType;
+import fr.cachi.emplois.domain.model.ExtractedFields;
 import fr.cachi.emplois.domain.model.LlmScore;
 import fr.cachi.emplois.domain.model.Offer;
 import fr.cachi.emplois.domain.model.Profile;
@@ -24,7 +26,8 @@ import java.util.List;
 public class BedrockLlmProvider implements LlmProvider {
 
     private final String model;
-    private final String systemPrompt;
+    private final String scoringSystemPrompt;
+    private final String extractionSystemPrompt;
     private final Region region;
     private volatile BedrockRuntimeClient client;
 
@@ -36,7 +39,8 @@ public class BedrockLlmProvider implements LlmProvider {
     public BedrockLlmProvider(String model, String region) {
         this.model = model;
         this.region = Region.of(region);
-        this.systemPrompt = Prompts.load("prompts/scoring-system.txt");
+        this.scoringSystemPrompt = Prompts.load("prompts/scoring-system.txt");
+        this.extractionSystemPrompt = Prompts.load("prompts/extraction-system.txt");
     }
 
     @Override
@@ -48,11 +52,18 @@ public class BedrockLlmProvider implements LlmProvider {
     @Override
     public LlmScore score(Profile profile, Offer offer) {
         String userMessage = Prompts.scoringUser(profile, offer);
-        String responseText = invoke(userMessage);
+        String responseText = invoke(scoringSystemPrompt, userMessage);
         return parse(responseText);
     }
 
-    private String invoke(String userMessage) {
+    @Override
+    public ExtractedFields extract(Offer offer) {
+        String userMessage = Prompts.extractionUser(offer);
+        String responseText = invoke(extractionSystemPrompt, userMessage);
+        return parseExtraction(responseText);
+    }
+
+    private String invoke(String systemPrompt, String userMessage) {
         ObjectNode body = Json.mapper().createObjectNode();
         body.put("anthropic_version", "bedrock-2023-05-31");
         body.put("max_tokens", 500);
@@ -106,6 +117,52 @@ public class BedrockLlmProvider implements LlmProvider {
         } catch (Exception e) {
             throw new IllegalStateException("Réponse Bedrock non interprétable", e);
         }
+    }
+
+    /** Extrait le texte de la réponse Bedrock puis parse le JSON d'extraction structurée (F12). */
+    static ExtractedFields parseExtraction(String bedrockJson) {
+        try {
+            JsonNode root = Json.mapper().readTree(bedrockJson);
+            String text = extractText(root);
+            JsonNode obj = Json.mapper().readTree(extractJsonObject(text));
+
+            ContractType contract = null;
+            JsonNode c = obj.get("contract_type");
+            if (c != null && !c.isNull() && !c.asText().isBlank()) {
+                contract = ContractType.fromLabel(c.asText());
+            }
+            List<String> stack = new ArrayList<>();
+            JsonNode s = obj.get("stack");
+            if (s != null && s.isArray()) {
+                s.forEach(n -> {
+                    if (!n.isNull() && !n.asText().isBlank()) {
+                        stack.add(n.asText());
+                    }
+                });
+            }
+            return new ExtractedFields(
+                    contract,
+                    intOrNull(obj, "remote_percent"),
+                    stack,
+                    intOrNull(obj, "tjm_min"),
+                    intOrNull(obj, "tjm_max"),
+                    intOrNull(obj, "salary_min"),
+                    intOrNull(obj, "salary_max"),
+                    textOrNull(obj, "currency"),
+                    textOrNull(obj, "location"));
+        } catch (Exception e) {
+            throw new IllegalStateException("Réponse d'extraction Bedrock non interprétable", e);
+        }
+    }
+
+    private static Integer intOrNull(JsonNode obj, String field) {
+        JsonNode n = obj.get(field);
+        return n == null || n.isNull() || !n.isNumber() ? null : n.asInt();
+    }
+
+    private static String textOrNull(JsonNode obj, String field) {
+        JsonNode n = obj.get(field);
+        return n == null || n.isNull() || n.asText().isBlank() ? null : n.asText();
     }
 
     /** Réponse Anthropic sur Bedrock : { "content": [ { "type":"text", "text":"..." } ] }. */

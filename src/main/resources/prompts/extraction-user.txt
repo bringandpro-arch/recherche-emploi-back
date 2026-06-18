@@ -1,0 +1,8 @@
+OFFRE À ANALYSER :
+- Titre : {{title}}
+- Entreprise : {{company}}
+- Localisation (brute) : {{location}}
+- Description :
+{{description}}
+
+Extrais les champs structurés et réponds au format JSON demandé.

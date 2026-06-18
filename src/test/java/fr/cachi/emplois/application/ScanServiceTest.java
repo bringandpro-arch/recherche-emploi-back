@@ -43,7 +43,7 @@ class ScanServiceTest {
         CountingNotifier notifier = new CountingNotifier();
 
         ScanService service = new ScanService(
-                List.of(source), new OfferNormalizer(),
+                List.of(source), new OfferNormalizer(), new OfferEnricher(new DisabledLlm()),
                 new DedupService(new InMemorySeen()),
                 new ScoringService(new DisabledLlm()),
                 new InMemoryProfiles(profile),
@@ -66,7 +66,8 @@ class ScanServiceTest {
         InMemorySeen seen = new InMemorySeen();
         CountingNotifier notifier = new CountingNotifier();
         ScanService service = new ScanService(
-                List.of(source), new OfferNormalizer(), new DedupService(seen),
+                List.of(source), new OfferNormalizer(), new OfferEnricher(new DisabledLlm()),
+                new DedupService(seen),
                 new ScoringService(new DisabledLlm()), new InMemoryProfiles(profile),
                 new InMemoryOffers(), new InMemoryScored(), notifier, null);
 
