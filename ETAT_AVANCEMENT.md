@@ -44,7 +44,7 @@ _Dernière mise à jour : 2026-06-18_
 | F8 | Scan périodique (EventBridge Scheduler → Lambda) | ✅ | `ScanService` orchestre fetch→normalise→dédup→score→persiste→notifie→historise ; `ScanHandler` câblé (`Wiring`) ; `ScanRun` persisté ; test e2e vert |
 | F9 | Notification Telegram | ✅ | port `Notifier` + `TelegramNotifier` (sendMessage HTML, lien+résumé+score, anti-doublon via `SeenOffers`) |
 | F10 | Filtrage freelance/CDI + localisation/remote | ✅ | `GET /offers` + `OffersQueryService`/`OffersFilter` (contrat, remoteMin, location, minScore) ; tri par score ; tests verts |
-| F11 | Front Ionic + Amplify + domaine (login Cognito, profil, liste, détail) | ⬜ | |
+| F11 | Front Ionic + Amplify + domaine (login Cognito, profil, liste, détail) | ✅ | App Ionic 8 + Angular 20 standalone + Tailwind ; auth Cognito (Amplify) + guard ; pages login/profil/offres(filtres)/détail ; `ApiService` JWT ; `amplify.yml` ; build `www/` OK |
 
 ## Phase 2 — V1.1+ (après MVP)
 
@@ -62,3 +62,16 @@ _Dernière mise à jour : 2026-06-18_
 - **2026-06-18** — Phase 1 terminée et fichiers versionnés/poussés (back `06982f4`, front `2878103`).
   Arbitrages tranchés avec le commanditaire → bascule de la conception vers **AWS serverless + Cognito +
   Bedrock + Amplify + multi-utilisateur**. PLAN/ETAT révisés. Démarrage Phase 2 sur F1.
+- **2026-06-18** — **MVP F1→F11 terminé.** Backend : socle SAM, auth Cognito, profil, 3 connecteurs,
+  normalisation, dédup/historique, scoring (règles + Bedrock), scan orchestré, Telegram, filtres — **25 tests verts**.
+  Front : app Ionic/Angular/Tailwind (login Cognito, profil, offres filtrables, détail) — build OK.
+  Tout poussé sur les deux repos.
+
+### Reste à faire avant mise en production (hors périmètre code)
+- Renseigner les secrets dans SSM (clés France Travail, Adzuna, token Telegram) et les sorties Cognito
+  (`userPoolId`/`userPoolClientId`) dans les environnements front, après `sam deploy`.
+- `sam deploy` (backend) + brancher Amplify Hosting sur le repo front + domaines `emplois.cachi.fr` /
+  `api.emplois.cachi.fr`. Nécessite les credentials AWS du commanditaire.
+- Activer Claude sur Bedrock (accès modèle) dans la région choisie.
+
+## Suite (V1.1+) : F12 extraction IA · F13 CDI→freelance · F14 pitch · F15 feedback · F16 sources · F17 mobile
