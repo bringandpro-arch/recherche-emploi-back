@@ -34,8 +34,8 @@ _Dernière mise à jour : 2026-06-18_
 
 | # | Feature | Statut | Notes |
 |---|---|---|---|
-| F1 | Socle serverless + IaC (SAM, DynamoDB, API GW, Cognito, CloudWatch) | ⬜ | |
-| F2 | Authentification Cognito (sign-up/login, JWT authorizer) | ⬜ | |
+| F1 | Socle serverless + IaC (SAM, DynamoDB, API GW, Cognito, CloudWatch) | ✅ | pom.xml, template.yaml (6 tables, Cognito, API HTTP, scan planifié), handlers API+scan, /health, tests verts |
+| F2 | Authentification Cognito (sign-up/login, JWT authorizer) | 🟡 | User pool + authorizer JWT définis dans template.yaml ; extraction `userId` à brancher dans l'API |
 | F3 | Profil de compétences (API + DynamoDB, scoping userId) | ⬜ | |
 | F4 | Interface `JobSource` + connecteurs (France Travail, Adzuna, Remotive) | ⬜ | |
 | F5 | Normalisation des offres | ⬜ | |

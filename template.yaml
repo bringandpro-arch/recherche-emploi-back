@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  recherche-emploi-back — backend serverless (API + scan d'offres d'emploi).
+  Lambda (Java 21) + API Gateway HTTP + Cognito + DynamoDB + EventBridge Scheduler + Bedrock.
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+  ScanSchedule:
+    Type: String
+    Default: rate(3 hours)
+    Description: Expression EventBridge Scheduler pour le scan periodique.
+  CorsOrigin:
+    Type: String
+    Default: https://emplois.cachi.fr
+  BedrockRegion:
+    Type: String
+    Default: eu-west-1
+  LlmModel:
+    Type: String
+    Default: anthropic.claude-haiku-4-5
+
+Globals:
+  Function:
+    Runtime: java21
+    MemorySize: 1024
+    Timeout: 30
+    Architectures: [x86_64]
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        TABLE_PROFILES: !Ref ProfilesTable
+        TABLE_OFFERS: !Ref OffersTable
+        TABLE_SCORED: !Ref ScoredOffersTable
+        TABLE_SEEN: !Ref SeenOffersTable
+        TABLE_SCANRUNS: !Ref ScanRunsTable
+        TABLE_NOTIFICATIONS: !Ref NotificationsTable
+        BEDROCK_REGION: !Ref BedrockRegion
+        LLM_MODEL: !Ref LlmModel
+        CORS_ALLOWED_ORIGINS: !Ref CorsOrigin
+
+Resources:
+
+  # ───────────────────────── Cognito (auth) ─────────────────────────
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub recherche-emploi-${Stage}
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 10
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireUppercase: true
+          RequireSymbols: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub recherche-emploi-${Stage}-web
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # ───────────────────────── API HTTP ─────────────────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowOrigins: [!Ref CorsOrigin, "http://localhost:8100"]
+        AllowHeaders: ["authorization", "content-type"]
+        AllowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      Auth:
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+              audience:
+                - !Ref UserPoolClient
+        # Par defaut les routes exigent un JWT ; /health est explicitement public.
+        DefaultAuthorizer: CognitoJwt
+
+  # ───────────────────────── Lambda : API ─────────────────────────
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub recherche-emploi-api-${Stage}
+      CodeUri: target/recherche-emploi-back.jar
+      Handler: fr.cachi.emplois.infrastructure.handler.ApiHandler::handleRequest
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref ProfilesTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref OffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref ScoredOffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref SeenOffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref ScanRunsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref NotificationsTable }
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /health
+            Auth: { Authorizer: NONE }
+        ApiRoutes:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: ANY
+            Path: /{proxy+}
+
+  # ───────────────────────── Lambda : Scan ─────────────────────────
+  ScanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub recherche-emploi-scan-${Stage}
+      CodeUri: target/recherche-emploi-back.jar
+      Handler: fr.cachi.emplois.infrastructure.handler.ScanHandler::handleRequest
+      Timeout: 300
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref ProfilesTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref OffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref ScoredOffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref SeenOffersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref ScanRunsTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref NotificationsTable }
+        - Statement:
+            - Effect: Allow
+              Action: ["bedrock:InvokeModel"]
+              Resource: "*"
+            - Effect: Allow
+              Action: ["ssm:GetParameter", "ssm:GetParametersByPath"]
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/recherche-emploi/${Stage}/*
+      Events:
+        ScheduledScan:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: !Ref ScanSchedule
+            Description: Scan periodique des offres d'emploi
+
+  # ───────────────────────── DynamoDB ─────────────────────────
+  ProfilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-Profiles-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: userId, AttributeType: S }
+      KeySchema:
+        - { AttributeName: userId, KeyType: HASH }
+
+  OffersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-Offers-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: dedupKey, AttributeType: S }
+        - { AttributeName: sourceRef, AttributeType: S }
+      KeySchema:
+        - { AttributeName: dedupKey, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: bySourceRef
+          KeySchema:
+            - { AttributeName: sourceRef, KeyType: HASH }
+          Projection: { ProjectionType: ALL }
+
+  ScoredOffersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-ScoredOffers-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: userId, AttributeType: S }
+        - { AttributeName: offerDedupKey, AttributeType: S }
+      KeySchema:
+        - { AttributeName: userId, KeyType: HASH }
+        - { AttributeName: offerDedupKey, KeyType: RANGE }
+
+  SeenOffersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-SeenOffers-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: userId, AttributeType: S }
+        - { AttributeName: dedupKey, AttributeType: S }
+      KeySchema:
+        - { AttributeName: userId, KeyType: HASH }
+        - { AttributeName: dedupKey, KeyType: RANGE }
+
+  ScanRunsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-ScanRuns-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: scanId, AttributeType: S }
+      KeySchema:
+        - { AttributeName: scanId, KeyType: HASH }
+
+  NotificationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub recherche-emploi-Notifications-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: userId, AttributeType: S }
+        - { AttributeName: sentKey, AttributeType: S }
+      KeySchema:
+        - { AttributeName: userId, KeyType: HASH }
+        - { AttributeName: sentKey, KeyType: RANGE }
+
+Outputs:
+  ApiUrl:
+    Description: URL de base de l'API HTTP
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
