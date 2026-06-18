@@ -37,7 +37,7 @@ _Dernière mise à jour : 2026-06-18_
 | F1 | Socle serverless + IaC (SAM, DynamoDB, API GW, Cognito, CloudWatch) | ✅ | pom.xml, template.yaml (6 tables, Cognito, API HTTP, scan planifié), handlers API+scan, /health, tests verts |
 | F2 | Authentification Cognito (sign-up/login, JWT authorizer) | ✅ | User pool + authorizer JWT (template.yaml) + `AuthContext` extrait le `sub` ; routes protégées (401 sans JWT) |
 | F3 | Profil de compétences (API + DynamoDB, scoping userId) | ✅ | `Profile`/`ProfileService`/`ProfileRepository` + impl. DynamoDB ; routes `GET`/`PUT /profile` scopées userId ; tests roundtrip verts |
-| F4 | Interface `JobSource` + connecteurs (France Travail, Adzuna, Remotive) | ⬜ | |
+| F4 | Interface `JobSource` + connecteurs (France Travail, Adzuna, Remotive) | ✅ | Interface `JobSource` + `RawJob`/`SearchCriteria` ; 3 connecteurs (OAuth2 FT, clés Adzuna, Remotive sans clé) ; registre `JobSources` (actifs selon config) ; parsing testé hors-ligne (4 tests) |
 | F5 | Normalisation des offres | ⬜ | |
 | F6 | Déduplication + historique | ⬜ | |
 | F7 | Scoring (règles + IA Bedrock via `LlmProvider`) | ⬜ | |
