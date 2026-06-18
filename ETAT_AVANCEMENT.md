@@ -41,8 +41,8 @@ _Dernière mise à jour : 2026-06-18_
 | F5 | Normalisation des offres | ✅ | `OfferNormalizer` : contrat (labels FR), remote %, ville (villes FR connues), salaire/TJM, stack (dictionnaire techs), `dedupKey` ; modèle `Offer` ; tests verts |
 | F6 | Déduplication + historique | ✅ | `DedupService` (dédup intra-lot + `selectUnseen`/`markSeen` par userId) ; ports `OfferRepository`/`SeenOfferRepository` + impl. DynamoDB ; tests verts |
 | F7 | Scoring (règles + IA Bedrock via `LlmProvider`) | ✅ | `ScoringService` (règles : skills/contrat/localisation/remote/rému/fraîcheur + pénalité mots exclus, pré-filtre IA) ; port `LlmProvider` + `BedrockLlmProvider`/`NoopLlmProvider` + `Prompts` (gabarits resources) ; tests verts |
-| F8 | Scan périodique (EventBridge Scheduler → Lambda) | ⬜ | |
-| F9 | Notification Telegram | ⬜ | |
+| F8 | Scan périodique (EventBridge Scheduler → Lambda) | ✅ | `ScanService` orchestre fetch→normalise→dédup→score→persiste→notifie→historise ; `ScanHandler` câblé (`Wiring`) ; `ScanRun` persisté ; test e2e vert |
+| F9 | Notification Telegram | ✅ | port `Notifier` + `TelegramNotifier` (sendMessage HTML, lien+résumé+score, anti-doublon via `SeenOffers`) |
 | F10 | Filtrage freelance/CDI + localisation/remote | ⬜ | |
 | F11 | Front Ionic + Amplify + domaine (login Cognito, profil, liste, détail) | ⬜ | |
 
