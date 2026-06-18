@@ -1,5 +1,8 @@
 package fr.cachi.emplois.domain.model;
 
+import java.text.Normalizer;
+import java.util.Locale;
+
 /** Type de contrat normalisé. */
 public enum ContractType {
     FREELANCE,
@@ -11,15 +14,20 @@ public enum ContractType {
         if (raw == null) {
             return UNKNOWN;
         }
-        String r = raw.toLowerCase();
-        if (r.contains("freelance") || r.contains("indépendant") || r.contains("independant")
-                || r.contains("mission") || r.contains("régie") || r.contains("regie")) {
+        String r = Normalizer.normalize(raw, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT);
+
+        if (r.contains("freelance") || r.contains("independant") || r.contains("mission")
+                || r.contains("regie") || r.contains("portage")) {
             return FREELANCE;
         }
-        if (r.contains("cdi")) {
+        // "indetermine" doit être testé avant "determine" (sous-chaîne).
+        if (r.contains("cdi") || r.contains("duree indetermin") || r.contains("indetermin")) {
             return CDI;
         }
-        if (r.contains("cdd") || r.contains("intérim") || r.contains("interim")) {
+        if (r.contains("cdd") || r.contains("duree determin") || r.contains("determin")
+                || r.contains("interim") || r.contains("temporaire")) {
             return CDD;
         }
         return UNKNOWN;
