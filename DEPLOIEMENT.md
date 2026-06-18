@@ -54,6 +54,41 @@ Vérifier que ça répond :
 aws sts get-caller-identity
 ```
 
+### 1.3 Permission set SSO dédié (recommandé)
+
+Pour des droits **scopés à ce projet** et indépendants des autres, créer un *permission set* dédié dans
+**IAM Identity Center** plutôt que d'utiliser un compte large. La policy correspondante est versionnée
+dans le fichier **`policy`** à la racine du projet (déploiement SAM + IAM/SSM/KMS scopés, SNS, CloudWatch,
+Scheduler, Bedrock, Amplify).
+
+1. **Créer le permission set** : IAM Identity Center → *Permission sets* → *Create* → *Custom* →
+   nom `recherche-emploi-deploy` → à l'étape *Inline policy*, **coller le contenu du fichier `policy`**.
+2. **Assigner** : IAM Identity Center → *AWS accounts* → compte cible → *Assign users or groups* →
+   sélectionner **l'utilisateur (ou un groupe)** existant → choisir le permission set. *(Pas besoin de
+   créer un nouvel utilisateur : un même user peut porter plusieurs permission sets.)*
+3. **Configurer le profil CLI** (`~/.aws/config`) :
+   ```ini
+   [profile recherche-emploi]
+   sso_session = <ta-session-sso>
+   sso_account_id = <ID_DU_COMPTE>
+   sso_role_name = recherche-emploi-deploy
+   region = eu-west-3
+   ```
+   (Si pas encore de `sso_session` : `aws configure sso` une fois.)
+4. **Se connecter et utiliser ce profil** :
+   ```
+   aws sso login --profile recherche-emploi
+   aws sts get-caller-identity --profile recherche-emploi
+   ```
+   Puis pour toutes les commandes : `export AWS_PROFILE=recherche-emploi` (Git Bash) /
+   `$env:AWS_PROFILE="recherche-emploi"` (PowerShell), ou ajouter `profile = "recherche-emploi"` sous
+   `[default.deploy.parameters]` dans `samconfig.toml`, ou `--profile recherche-emploi` sur chaque commande.
+
+> Limites connues : l'**activation du modèle Bedrock** (console *Model access*) peut exiger en plus des
+> droits `aws-marketplace:Subscribe` (souvent admin) — à faire une fois par un compte admin si le toggle
+> est grisé. La première connexion **Amplify ↔ GitHub** demande un consentement OAuth interactif.
+> Pour des **domaines custom** (§10), ajouter `acm:*` et `route53:*` à la policy.
+
 ---
 
 ## 2. Récupérer les clés des sources externes
